@@ -10,6 +10,7 @@
 int main()
 {
     InitWindow(800, 600, "Scene and Resource Management");
+    SetTargetFPS(60);
 
     SceneManager scene_manager;
 
