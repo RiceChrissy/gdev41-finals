@@ -24,8 +24,7 @@ const float FRICTION = 1;
 // {
 // };
 
-float RandomDirection()
-{
+float RandomDirection(){
     float x = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     // Make it [-1, 1]
     return x * 2.0f - 1.0f;
@@ -61,13 +60,13 @@ entt::entity initializePlayer(entt::registry &registry, Vector2 point){
     return Player;
 }
 
-void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, Vector2 point)
+void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, Vector2 spawnPoint, bool isRandomDirection)
 {
     for (int x = 0; x < numberOfProjectiles; x++)
     {
         entt::entity projectile = registry.create();
         TransformComponent &pos_comp = registry.emplace<TransformComponent>(projectile);
-        pos_comp.position = point;
+        pos_comp.position = spawnPoint;
         CircleComponent &circ_comp = registry.emplace<CircleComponent>(projectile);
         circ_comp.radius = GetRandomValue(20, 50);
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
