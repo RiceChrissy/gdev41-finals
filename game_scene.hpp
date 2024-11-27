@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include "scene_manager.hpp"
+#include "quad_tree.hpp"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
