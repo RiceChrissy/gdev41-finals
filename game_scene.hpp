@@ -3,6 +3,7 @@
 
 #include <raylib.h>
 #include <raymath.h>
+#include "entt.hpp"
 
 #include <iostream>
 #include <string>
@@ -10,7 +11,8 @@
 #include <math.h>
 
 #include "scene_manager.hpp"
-#include "quad_tree.hpp"
+//#include "quad_tree.hpp"
+#include "game_components.hpp"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
@@ -18,21 +20,15 @@ const float FPS = 60;
 const float TIMESTEP = 1 / FPS;
 const float FRICTION = 1;
 
-struct Player
-{
-    Vector2 position;
-    float radius;
-    Color color;
-
-    float mass;
-    float inverse_mass;
-    Vector2 acceleration;
-    Vector2 velocity;
-};
-
 // struct WeaponComponent
 // {
 // };
+
+float RandomDirection(){
+    float x = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    // Make it [-1, 1]
+    return x * 2.0f - 1.0f;
+}
 
 float GetWeaponAngle(Vector2 circle_position)
 {
@@ -54,8 +50,40 @@ float GetWeaponAngle(Vector2 circle_position)
     return angle_degrees;
 }
 
+entt::entity initializePlayer(entt::registry &registry, Vector2 point){
+    entt::entity Player = registry.create();
+    TransformComponent &pos_comp = registry.emplace<TransformComponent>(Player);
+    pos_comp.position = point;
+    CircleComponent &circ_comp = registry.emplace<CircleComponent>(Player);
+    PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(Player);
+    BoxCollider2D &box_comp = registry.emplace<BoxCollider2D>(Player);
+    return Player;
+}
+
+void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, Vector2 spawnPoint, bool isRandomDirection)
+{
+    for (int x = 0; x < numberOfProjectiles; x++)
+    {
+        entt::entity projectile = registry.create();
+        TransformComponent &pos_comp = registry.emplace<TransformComponent>(projectile);
+        pos_comp.position = spawnPoint;
+        CircleComponent &circ_comp = registry.emplace<CircleComponent>(projectile);
+        circ_comp.radius = GetRandomValue(20, 50);
+        PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
+        ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
+        phys_comp.velocity = {500.0f * RandomDirection(), 500.0f * RandomDirection()};
+        circ_comp.color = BLUE;
+        circ_comp.color = GRAY;
+    }
+}
+
 class GameScene : public Scene
 {
+    entt::registry registry;
+
+    entt::entity player = initializePlayer(registry, Vector2{WINDOW_WIDTH/2,WINDOW_HEIGHT/2});
+    
+
     Texture raylib_logo;
     Vector2 logo_position;
     float move_dir_x = 1;
@@ -72,31 +100,36 @@ class GameScene : public Scene
     bool shield_is_active;
     float shield_animation;
 
-    Player player;
+    //Player player;
     float accumulator;
+
+    TransformComponent &player_transform = registry.get<TransformComponent>(player);
+    CircleComponent &player_circle = registry.get<CircleComponent>(player);
+    PhysicsComponent &player_physics = registry.get<PhysicsComponent>(player);
+    BoxCollider2D &player_collider = registry.get<BoxCollider2D>(player);
 
 public:
     void
     Begin() override
     {
+        
         raylib_logo = ResourceManager::GetInstance()->GetTexture("Raylib_logo.png");
         logo_position = {300, 100};
 
-        player.position = {WINDOW_WIDTH / 4, WINDOW_HEIGHT / 3};
-        player.radius = 25.0f;
-        player.color = BLUE;
-        player.mass = 1.0f;
-        player.inverse_mass = 1 / player.mass;
-        player.acceleration = Vector2Zero();
-        player.velocity = Vector2Zero();
+        player_circle.radius = 25.0f;
+        player_circle.color = BLUE;
+        player_physics.mass = 1.0f;
+        player_physics.inverse_mass = 1 / player_physics.mass;
+        player_physics.acceleration = Vector2Zero();
+        player_physics.velocity = Vector2Zero();
 
         sword = ResourceManager::GetInstance()->GetTexture("Sword2.png");
-        sword_position = player.position;
+        sword_position = player_transform.position;
         sword_rotation = 0;
         sword_is_active = false;
 
         shield = ResourceManager::GetInstance()->GetTexture("Shield.png");
-        shield_position = player.position;
+        shield_position = player_transform.position;
         shield_is_active = false;
 
         accumulator = 0;
@@ -106,6 +139,7 @@ public:
 
     void Update() override
     {
+
         float delta_time = GetFrameTime();
 
         logo_position.x += 100 * delta_time * move_dir_x;
@@ -142,7 +176,7 @@ public:
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !sword_is_active)
         {
-            sword_rotation = GetWeaponAngle(player.position) - 120.0f;
+            sword_rotation = GetWeaponAngle(player_transform.position) - 120.0f;
             sword_is_active = true;
         }
         // Enables sword swing, then disables after swinging a specific amount
@@ -175,7 +209,7 @@ public:
         }
 
         // Does Vector - Scalar multiplication with the sum of all forces and the inverse mass of the ball1
-        player.acceleration = Vector2Scale(forces, player.inverse_mass);
+        player_physics.acceleration = Vector2Scale(forces, player_physics.inverse_mass);
 
         // Physics step
         accumulator += delta_time;
@@ -183,18 +217,18 @@ public:
         {
             for (int i = 0; i < 2; i++)
             {
-                player.velocity = Vector2Add(player.velocity, Vector2Scale(player.acceleration, TIMESTEP));
-                player.velocity = Vector2Subtract(player.velocity, Vector2Scale(player.velocity, FRICTION * player.inverse_mass * TIMESTEP));
-                player.position = Vector2Add(player.position, Vector2Scale(player.velocity, TIMESTEP));
+                player_physics.velocity = Vector2Add(player_physics.velocity, Vector2Scale(player_physics.acceleration, TIMESTEP));
+                player_physics.velocity = Vector2Subtract(player_physics.velocity, Vector2Scale(player_physics.velocity, FRICTION * player_physics.inverse_mass * TIMESTEP));
+                player_transform.position = Vector2Add(player_transform.position, Vector2Scale(player_physics.velocity, TIMESTEP));
 
                 // Negates the velocity at x and y if the object hits a wall. (Basic Collision Detection)
-                if (player.position.x + player.radius >= WINDOW_WIDTH || player.position.x - player.radius <= 0)
+                if (player_transform.position.x + player_circle.radius >= WINDOW_WIDTH || player_transform.position.x - player_circle.radius <= 0)
                 {
-                    player.velocity.x *= -1;
+                    player_physics.velocity.x *= -1;
                 }
-                if (player.position.y + player.radius >= WINDOW_HEIGHT || player.position.y - player.radius <= 0)
+                if (player_transform.position.y + player_circle.radius >= WINDOW_HEIGHT || player_transform.position.y - player_circle.radius <= 0)
                 {
-                    player.velocity.y *= -1;
+                    player_physics.velocity.y *= -1;
                 }
             }
             accumulator -= TIMESTEP;
@@ -206,13 +240,13 @@ public:
         DrawTexturePro(raylib_logo, {0, 0, 256, 256}, {logo_position.x, logo_position.y, 200, 200}, {0, 0}, 0.0f, WHITE);
         if (sword_is_active)
         {
-            DrawTexturePro(sword, {0, 0, 50, 115}, {player.position.x, player.position.y, 25, 64}, {12.5, -32}, sword_rotation + sword_animation, WHITE);
+            DrawTexturePro(sword, {0, 0, 50, 115}, {player_transform.position.x, player_transform.position.y, 25, 64}, {12.5, -32}, sword_rotation + sword_animation, WHITE);
         }
         BeginBlendMode(BLEND_ALPHA);
-        DrawCircleV(player.position, player.radius, player.color);
+        DrawCircleV(player_transform.position, player_circle.radius, player_circle.color);
         if (shield_is_active)
         {
-            DrawTexturePro(shield, {0, 0, 269, 269}, {player.position.x, player.position.y, player.radius * 3, player.radius * 3}, {player.radius * 1.5f, player.radius * 1.5f}, 0.0f, BLUE);
+            DrawTexturePro(shield, {0, 0, 269, 269}, {player_transform.position.x, player_transform.position.y, player_circle.radius * 3, player_circle.radius * 3}, {player_circle.radius * 1.5f, player_circle.radius * 1.5f}, 0.0f, BLUE);
         }
         EndBlendMode();
     }
