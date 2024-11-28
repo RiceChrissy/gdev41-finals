@@ -7,10 +7,15 @@
 #include "title_scene.hpp"
 #include "game_scene.hpp"
 
+extern const int WINDOW_WIDTH;
+extern const int WINDOW_HEIGHT;
+extern const float FPS;
+
 int main()
 {
-    InitWindow(800, 600, "Scene and Resource Management");
-    SetTargetFPS(60);
+
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Scene and Resource Management");
+    SetTargetFPS(FPS);
 
     SceneManager scene_manager;
 

@@ -7,6 +7,12 @@
 #include <string>
 #include <unordered_map>
 
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
+const float FPS = 60;
+const float TIMESTEP = 1 / FPS;
+const float FRICTION = 1;
+
 class SceneManager;
 
 // Base class that all scenes inherit

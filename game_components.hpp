@@ -9,27 +9,32 @@
 
 #include "scene_manager.hpp"
 
-struct TransformComponent{
+struct TransformComponent
+{
     bool isEnabled;
     Vector2 position;
 };
 
-struct CircleComponent{
+struct CircleComponent
+{
     bool isEnabled;
     float radius;
     Color color;
 };
 
-struct BoxCollider2D{
+struct BoxCollider2D
+{
     bool isEnabled;
     Vector2 size;
 };
 
-struct CircleCollider2D{
+struct CircleCollider2D
+{
     bool isEnabled;
 };
 
-struct PhysicsComponent{
+struct PhysicsComponent
+{
     bool isEnabled;
     float mass;
     float inverse_mass;
@@ -37,17 +42,28 @@ struct PhysicsComponent{
     Vector2 velocity;
 };
 
-struct SwordComponent{
+struct WeaponComponent
+{
     bool isRanged;
     bool isAoE;
     int numberOfProjectiles;
     float damage;
-    
+
+    bool is_active;
+    float rotation;
+    float animation;
 };
 
-struct ProjectileComponent{
-    enum owner{ 
-        player, enemy
+struct TextureComponent
+{
+    Texture texture;
+};
+struct ProjectileComponent
+{
+    enum owner
+    {
+        player,
+        enemy
     };
     owner ownedBy;
     float damage;
