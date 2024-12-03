@@ -71,6 +71,7 @@ struct ProjectileComponent
         player,
         enemy
     };
+    float health;
     owner ownedBy;
     bool isAoE;
     float damage;

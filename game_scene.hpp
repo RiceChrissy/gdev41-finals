@@ -47,7 +47,7 @@ float GetWeaponAngle(Vector2 circle_position)
     return angle_degrees;
 }
 
-void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, int spawnArea)
+void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectiles, int spawnArea)
 {
     Vector2 spawnPoint;
     Vector2 direction;
@@ -134,6 +134,8 @@ entt::entity InitializeWeapon(entt::registry &registry, entt::entity &player)
     weap_comp.is_active = false;
     weap_comp.rotation = 0.0f;
     weap_comp.animation = 0.0f;
+
+
     return weapon;
 }
 
@@ -220,7 +222,7 @@ public:
         // testing inputs
 
         if (IsKeyPressed(KEY_UP)){
-            InitializeProjectile(registry, 10, KEY_UP);
+            InitializeEnemyProjectile(registry, 10, KEY_UP);
             std::cout << "Spawned" << std::endl;
         }
 
