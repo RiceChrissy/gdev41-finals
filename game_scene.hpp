@@ -47,20 +47,52 @@ float GetWeaponAngle(Vector2 circle_position)
     return angle_degrees;
 }
 
-void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, Vector2 spawnPoint, bool isRandomDirection)
+void InitializeProjectile(entt::registry &registry, float numberOfProjectiles, int spawnArea)
 {
+    Vector2 spawnPoint;
+    Vector2 direction;
+    
+
     for (int x = 0; x < numberOfProjectiles; x++)
     {
+
+        switch (spawnArea)
+        {
+        case KEY_UP:
+            spawnPoint = Vector2{(float)GetRandomValue(0,800),0};
+            break;
+        case KEY_RIGHT:
+            spawnPoint = Vector2{(float) GetScreenWidth(), (float) GetRandomValue(0, GetScreenHeight())};
+            break;
+        case KEY_LEFT:
+            spawnPoint = Vector2{0, (float) GetRandomValue(0, GetScreenHeight())};
+            break;
+        case KEY_DOWN:
+            spawnPoint = Vector2{ (float) GetRandomValue(0,GetScreenWidth()), (float) GetScreenHeight()};
+            break;
+        default:
+            break;
+        }        
+        direction = Vector2Normalize(Vector2Subtract( 
+                Vector2{
+                (float)/* X VALUE:*/ GetRandomValue((GetScreenWidth()/2)-50, (GetScreenWidth()/2)+50), 
+                (float)/* Y VALUE:*/ GetRandomValue((GetScreenHeight()/2)-50, (GetScreenHeight()/2)+50)
+                },
+                spawnPoint));
         entt::entity projectile = registry.create();
         TransformComponent &pos_comp = registry.emplace<TransformComponent>(projectile);
         pos_comp.position = spawnPoint;
         CircleComponent &circ_comp = registry.emplace<CircleComponent>(projectile);
-        circ_comp.radius = GetRandomValue(20, 50);
+        circ_comp.radius = GetRandomValue(10, 15);
+        circ_comp.color = RED;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
         ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
-        phys_comp.velocity = {500.0f * RandomDirection(), 500.0f * RandomDirection()};
-        circ_comp.color = BLUE;
-        circ_comp.color = GRAY;
+        proj_comp.ownedBy = proj_comp.enemy;
+        phys_comp.velocity = Vector2Scale(direction, 200);
+        CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
+        collider.position = pos_comp.position;
+        collider.radius = circ_comp.radius;     
+
     }
 }
 
@@ -77,7 +109,10 @@ entt::entity InitializePlayer(entt::registry &registry, Vector2 point)
     phys_comp.inverse_mass = 1 / phys_comp.mass;
     phys_comp.acceleration = Vector2Zero();
     phys_comp.velocity = Vector2Zero();
-    BoxCollider2D &box_comp = registry.emplace<BoxCollider2D>(Player);
+    phys_comp.forces = Vector2Zero();
+    CircleCollider2D &collider = registry.emplace<CircleCollider2D>(Player);
+    collider.position = pos_comp.position;
+    collider.radius = circ_comp.radius;
     return Player;
 }
 
@@ -131,7 +166,7 @@ class GameScene : public Scene
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     CircleComponent &player_circle = registry.get<CircleComponent>(player);
     PhysicsComponent &player_physics = registry.get<PhysicsComponent>(player);
-    BoxCollider2D &player_collider = registry.get<BoxCollider2D>(player);
+    CircleCollider2D &player_collider = registry.get<CircleCollider2D>(player);
 
     // Sword components
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
@@ -179,7 +214,15 @@ public:
             move_dir_y *= -1;
         }
 
+        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
         Vector2 forces = Vector2Zero(); // every frame set the forces to a 0 vector
+
+        // testing inputs
+
+        if (IsKeyPressed(KEY_UP)){
+            InitializeProjectile(registry, 10, KEY_UP);
+            std::cout << "Spawned" << std::endl;
+        }
 
         // PLAYER INPUTS
         if (IsKeyDown(KEY_W))
@@ -242,6 +285,7 @@ public:
         // auto collision_circles = registry.view<CircleComponent>();
         // auto collision_physics = registry.view<PhysicsComponent>();
 
+        auto collisionCircles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, CircleCollider2D>();
         accumulator += delta_time;
         while (accumulator >= TIMESTEP)
         {
@@ -261,7 +305,17 @@ public:
                     player_physics.velocity.y *= -1;
                 }
             }
-            accumulator -= TIMESTEP;
+            for (auto entity : collisionCircles)
+            {
+                TransformComponent &position = registry.get<TransformComponent>(entity);
+                CircleComponent &circle = registry.get<CircleComponent>(entity);
+                PhysicsComponent &physics = registry.get<PhysicsComponent>(entity);
+                CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
+
+                physics.velocity = Vector2Add(physics.velocity, Vector2Scale(physics.acceleration, TIMESTEP));
+                position.position = Vector2Add(position.position, Vector2Scale(physics.velocity, TIMESTEP));
+            }
+           accumulator -= TIMESTEP;
         }
     }
 
@@ -277,6 +331,15 @@ public:
         if (shield_is_active) // Shield animation at right click
         {
             DrawTexturePro(shield, {0, 0, 269, 269}, {player_transform.position.x, player_transform.position.y, player_circle.radius * 3, player_circle.radius * 3}, {player_circle.radius * 1.5f, player_circle.radius * 1.5f}, 0.0f, BLUE);
+        }
+
+        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
+
+        for (auto entity : allProjectiles)
+        {
+            TransformComponent &pos = registry.get<TransformComponent>(entity);
+            CircleComponent &circle = registry.get<CircleComponent>(entity);
+            DrawCircleV(pos.position, circle.radius, circle.color);
         }
         EndBlendMode();
     }

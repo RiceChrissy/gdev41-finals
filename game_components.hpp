@@ -25,12 +25,17 @@ struct CircleComponent
 struct BoxCollider2D
 {
     bool isEnabled;
+    float width;
+    float height;
     Vector2 size;
+    Vector2 position;
 };
 
 struct CircleCollider2D
 {
     bool isEnabled;
+    float radius;
+    Vector2 position;
 };
 
 struct PhysicsComponent
@@ -38,6 +43,7 @@ struct PhysicsComponent
     bool isEnabled;
     float mass;
     float inverse_mass;
+    Vector2 forces;
     Vector2 acceleration;
     Vector2 velocity;
 };
@@ -66,5 +72,6 @@ struct ProjectileComponent
         enemy
     };
     owner ownedBy;
+    bool isAoE;
     float damage;
 };
