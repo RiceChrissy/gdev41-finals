@@ -1,0 +1,4 @@
+HighestScore = 0
+SpeedUpgradeUnlocked = 0
+ProjectileUpgradeUnlocked = 0
+orbitUpgradeUnlocked = 0

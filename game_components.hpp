@@ -24,11 +24,8 @@ struct CircleComponent
 
 struct BoxCollider2D
 {
+    Rectangle colliderBounds;
     bool isEnabled;
-    float width;
-    float height;
-    Vector2 size;
-    Vector2 position;
 };
 
 struct CircleCollider2D
@@ -36,6 +33,29 @@ struct CircleCollider2D
     bool isEnabled;
     float radius;
     Vector2 position;
+
+    float getDistance(CircleCollider2D collider1, CircleCollider2D collider2)
+    {
+        Vector2 dist = Vector2Subtract(collider1.position, collider2.position);
+        return std::abs(Vector2Length(dist));
+    }
+
+    float getDistanceToPoint(CircleCollider2D collider1, Vector2 pos)
+    {
+        Vector2 dist = Vector2Subtract(collider1.position, pos);
+        return std::abs(Vector2Length(dist));
+    }
+
+    bool isCircleCircleColliding(CircleCollider2D collider1, CircleCollider2D collider2)
+    {
+        float sumOfRadii = collider1.radius + collider2.radius;
+        float distance = getDistance(collider1, collider2);
+        if (distance <= sumOfRadii)
+        {
+            return true;
+        }
+        return false;
+    }
 };
 
 struct PhysicsComponent
@@ -50,6 +70,11 @@ struct PhysicsComponent
 
 struct WeaponComponent
 {
+    int orbitUpgradeTier;
+    int projectileUpgradeTier;
+    int sizeUpgradeTier;
+    int speedUpgradeTier;
+
     bool isRanged;
     bool isAoE;
     int numberOfProjectiles;
@@ -75,4 +100,23 @@ struct ProjectileComponent
     owner ownedBy;
     bool isAoE;
     float damage;
+    bool destroyOnContact;
+};
+
+struct OrbitComponent
+{
+    enum owner
+    {
+        player,
+        enemy
+    };
+    float health;
+    owner ownedBy;
+    bool isAoE;
+    float damage;
+    bool destroyOnContact;
+
+    float orbitRadius;
+    float orbitSpeed;
+    float angle = 0.0f;
 };
