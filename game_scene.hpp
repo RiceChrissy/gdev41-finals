@@ -53,7 +53,6 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
 {
     Vector2 spawnPoint;
     Vector2 direction;
-    
 
     for (int x = 0; x < numberOfProjectiles; x++)
     {
@@ -61,27 +60,26 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
         switch (spawnArea)
         {
         case 1:
-            spawnPoint = Vector2{(float)GetRandomValue(0,800),0};
+            spawnPoint = Vector2{(float)GetRandomValue(0, 800), 0};
             break;
         case 2:
-            spawnPoint = Vector2{(float) GetScreenWidth(), (float) GetRandomValue(0, GetScreenHeight())};
+            spawnPoint = Vector2{(float)GetScreenWidth(), (float)GetRandomValue(0, GetScreenHeight())};
             break;
         case 3:
-            spawnPoint = Vector2{0, (float) GetRandomValue(0, GetScreenHeight())};
+            spawnPoint = Vector2{0, (float)GetRandomValue(0, GetScreenHeight())};
             break;
         case 4:
-            spawnPoint = Vector2{ (float) GetRandomValue(0,GetScreenWidth()), (float) GetScreenHeight()};
+            spawnPoint = Vector2{(float)GetRandomValue(0, GetScreenWidth()), (float)GetScreenHeight()};
             break;
         default:
             break;
         }
-        
-        direction = Vector2Normalize(Vector2Subtract( 
-                Vector2{
-                (float)/* X VALUE:*/ GetRandomValue((GetScreenWidth()/2)-50, (GetScreenWidth()/2)+50), 
-                (float)/* Y VALUE:*/ GetRandomValue((GetScreenHeight()/2)-50, (GetScreenHeight()/2)+50)
-                },
-                spawnPoint));
+
+        direction = Vector2Normalize(Vector2Subtract(
+            Vector2{
+                (float)/* X VALUE:*/ GetRandomValue((GetScreenWidth() / 2) - 50, (GetScreenWidth() / 2) + 50),
+                (float)/* Y VALUE:*/ GetRandomValue((GetScreenHeight() / 2) - 50, (GetScreenHeight() / 2) + 50)},
+            spawnPoint));
         entt::entity projectile = registry.create();
         TransformComponent &pos_comp = registry.emplace<TransformComponent>(projectile);
         pos_comp.position = spawnPoint;
@@ -93,6 +91,7 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
         proj_comp.isAoE = false;
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
+        proj_comp.ownedBy = proj_comp.enemy;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
         collider.position = pos_comp.position;
         collider.radius = circ_comp.radius;
@@ -103,24 +102,24 @@ void InitializePlayerProjectile(entt::registry &registry, float numberOfProjecti
 {
     Vector2 spawnPoint;
     Vector2 direction;
-    
 
     for (int x = 0; x < numberOfProjectiles; x++)
     {
         spawnPoint = registry.get<TransformComponent>(player).position;
-        if(numberOfProjectiles > 1){
-            direction = Vector2Normalize(Vector2Subtract( 
-                                {(float) GetRandomValue( Vector2SubtractValue(GetMousePosition(),30).x  , Vector2AddValue(GetMousePosition(),30).x), 
-                                 (float) GetRandomValue( Vector2SubtractValue(GetMousePosition(),30).y  , Vector2AddValue(GetMousePosition(),30).y)}
-                                ,
-                                spawnPoint));
+        if (numberOfProjectiles > 1)
+        {
+            direction = Vector2Normalize(Vector2Subtract(
+                {(float)GetRandomValue(Vector2SubtractValue(GetMousePosition(), 30).x, Vector2AddValue(GetMousePosition(), 30).x),
+                 (float)GetRandomValue(Vector2SubtractValue(GetMousePosition(), 30).y, Vector2AddValue(GetMousePosition(), 30).y)},
+                spawnPoint));
         }
-        else{
-            direction = Vector2Normalize(Vector2Subtract( 
-                                GetMousePosition(),
-                                spawnPoint));
+        else
+        {
+            direction = Vector2Normalize(Vector2Subtract(
+                GetMousePosition(),
+                spawnPoint));
         }
-        
+
         entt::entity projectile = registry.create();
         TransformComponent &pos_comp = registry.emplace<TransformComponent>(projectile);
         pos_comp.position = spawnPoint;
@@ -142,7 +141,6 @@ void InitializeOrbitProjectile(entt::registry &registry, float numberOfProjectil
 {
     Vector2 spawnPoint;
     Vector2 direction;
-    
 
     for (int x = 0; x < numberOfProjectiles; x++)
     {
@@ -159,16 +157,13 @@ void InitializeOrbitProjectile(entt::registry &registry, float numberOfProjectil
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
         ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
         proj_comp.isAoE = false;
-        //phys_comp.velocity = Vector2Scale(direction, 200);
+        // phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
         collider.position = pos_comp.position;
         collider.radius = circ_comp.radius;
-        
     }
 }
-
-
 
 entt::entity InitializePlayer(entt::registry &registry, Vector2 point)
 {
@@ -223,78 +218,81 @@ entt::entity InitializeWeapon(entt::registry &registry, entt::entity &player)
 
 void DrawTextureTiled(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, float scale, Color tint) // Yoinked From Raylib website
 {
-    if ((texture.id <= 0) || (scale <= 0.0f)) return;
-    if ((source.width == 0) || (source.height == 0)) return;
+    if ((texture.id <= 0) || (scale <= 0.0f))
+        return;
+    if ((source.width == 0) || (source.height == 0))
+        return;
 
-    int tileWidth = (int)(source.width*scale), tileHeight = (int)(source.height*scale);
+    int tileWidth = (int)(source.width * scale), tileHeight = (int)(source.height * scale);
     if ((dest.width < tileWidth) && (dest.height < tileHeight))
     {
-        DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width/tileWidth)*source.width, ((float)dest.height/tileHeight)*source.height},
-                    (Rectangle){dest.x, dest.y, dest.width, dest.height}, origin, rotation, tint);
+        DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width / tileWidth) * source.width, ((float)dest.height / tileHeight) * source.height},
+                       (Rectangle){dest.x, dest.y, dest.width, dest.height}, origin, rotation, tint);
     }
     else if (dest.width <= tileWidth)
     {
         int dy = 0;
-        for (;dy+tileHeight < dest.height; dy += tileHeight)
+        for (; dy + tileHeight < dest.height; dy += tileHeight)
         {
-            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width/tileWidth)*source.width, source.height}, (Rectangle){dest.x, dest.y + dy, dest.width, (float)tileHeight}, origin, rotation, tint);
+            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width / tileWidth) * source.width, source.height}, (Rectangle){dest.x, dest.y + dy, dest.width, (float)tileHeight}, origin, rotation, tint);
         }
         if (dy < dest.height)
         {
-            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width/tileWidth)*source.width, ((float)(dest.height - dy)/tileHeight)*source.height},
-                        (Rectangle){dest.x, dest.y + dy, dest.width, dest.height - dy}, origin, rotation, tint);
+            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)dest.width / tileWidth) * source.width, ((float)(dest.height - dy) / tileHeight) * source.height},
+                           (Rectangle){dest.x, dest.y + dy, dest.width, dest.height - dy}, origin, rotation, tint);
         }
     }
     else if (dest.height <= tileHeight)
     {
         int dx = 0;
-        for (;dx+tileWidth < dest.width; dx += tileWidth)
+        for (; dx + tileWidth < dest.width; dx += tileWidth)
         {
-            DrawTexturePro(texture, (Rectangle){source.x, source.y, source.width, ((float)dest.height/tileHeight)*source.height}, (Rectangle){dest.x + dx, dest.y, (float)tileWidth, dest.height}, origin, rotation, tint);
+            DrawTexturePro(texture, (Rectangle){source.x, source.y, source.width, ((float)dest.height / tileHeight) * source.height}, (Rectangle){dest.x + dx, dest.y, (float)tileWidth, dest.height}, origin, rotation, tint);
         }
 
         if (dx < dest.width)
         {
-            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx)/tileWidth)*source.width, ((float)dest.height/tileHeight)*source.height},
-                        (Rectangle){dest.x + dx, dest.y, dest.width - dx, dest.height}, origin, rotation, tint);
+            DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx) / tileWidth) * source.width, ((float)dest.height / tileHeight) * source.height},
+                           (Rectangle){dest.x + dx, dest.y, dest.width - dx, dest.height}, origin, rotation, tint);
         }
     }
     else
     {
         int dx = 0;
-        for (;dx+tileWidth < dest.width; dx += tileWidth)
+        for (; dx + tileWidth < dest.width; dx += tileWidth)
         {
             int dy = 0;
-            for (;dy+tileHeight < dest.height; dy += tileHeight)
+            for (; dy + tileHeight < dest.height; dy += tileHeight)
             {
                 DrawTexturePro(texture, source, (Rectangle){dest.x + dx, dest.y + dy, (float)tileWidth, (float)tileHeight}, origin, rotation, tint);
             }
 
             if (dy < dest.height)
             {
-                DrawTexturePro(texture, (Rectangle){source.x, source.y, source.width, ((float)(dest.height - dy)/tileHeight)*source.height},
-                    (Rectangle){dest.x + dx, dest.y + dy, (float)tileWidth, dest.height - dy}, origin, rotation, tint);
+                DrawTexturePro(texture, (Rectangle){source.x, source.y, source.width, ((float)(dest.height - dy) / tileHeight) * source.height},
+                               (Rectangle){dest.x + dx, dest.y + dy, (float)tileWidth, dest.height - dy}, origin, rotation, tint);
             }
         }
         if (dx < dest.width)
         {
             int dy = 0;
-            for (;dy+tileHeight < dest.height; dy += tileHeight)
+            for (; dy + tileHeight < dest.height; dy += tileHeight)
             {
-                DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx)/tileWidth)*source.width, source.height},
-                        (Rectangle){dest.x + dx, dest.y + dy, dest.width - dx, (float)tileHeight}, origin, rotation, tint);
+                DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx) / tileWidth) * source.width, source.height},
+                               (Rectangle){dest.x + dx, dest.y + dy, dest.width - dx, (float)tileHeight}, origin, rotation, tint);
             }
 
             if (dy < dest.height)
             {
-                DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx)/tileWidth)*source.width, ((float)(dest.height - dy)/tileHeight)*source.height},
-                    (Rectangle){dest.x + dx, dest.y + dy, dest.width - dx, dest.height - dy}, origin, rotation, tint);
+                DrawTexturePro(texture, (Rectangle){source.x, source.y, ((float)(dest.width - dx) / tileWidth) * source.width, ((float)(dest.height - dy) / tileHeight) * source.height},
+                               (Rectangle){dest.x + dx, dest.y + dy, dest.width - dx, dest.height - dy}, origin, rotation, tint);
             }
         }
     }
 }
 
-void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sword, int scale){
+void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sword, int scale)
+{
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
@@ -303,65 +301,77 @@ void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sw
         float sizeIncrease;
         // @Christian I couldn't figure out how to do sword size because the texture looks funky
         DrawTexturePro(sword_tex.texture, {0, 0, 50, 115}, {player_transform.position.x, player_transform.position.y, 25, 64}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, WHITE);
-        //DrawTextureTiled(sword_tex.texture, (Rectangle) {0, 0, 50, 115}, {player_transform.position.x*2, player_transform.position.y*2, 25*2, 64*2}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, 2, WHITE);
+        // DrawTextureTiled(sword_tex.texture, (Rectangle) {0, 0, 50, 115}, {player_transform.position.x*2, player_transform.position.y*2, 25*2, 64*2}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, 2, WHITE);
     }
-
 }
 
-int ToInt(std::string x){
+int ToInt(std::string x)
+{
     char y = x[0];
     return y - '0' + 48;
 }
 
-void parseSaveData(int &currentHighestScore , bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier){
+void parseSaveData(int &currentHighestScore, bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier)
+{
     std::fstream saveFile;
     saveFile.open("save.txt", std::ios::in);
     std::string line;
     if (saveFile.is_open())
     {
-        while (std::getline(saveFile, line)){
+        while (std::getline(saveFile, line))
+        {
             // std::cout << line << std::endl;
             std::string searchTarget;
-            if (line.find("HighestScore = ") == 0){
+            if (line.find("HighestScore = ") == 0)
+            {
                 searchTarget = "HighestScore = ";
                 currentHighestScore = std::stoi(line.erase(0, searchTarget.length()));
             }
-            if (line.find("SpeedUpgradeUnlocked = ") == 0){
+            if (line.find("SpeedUpgradeUnlocked = ") == 0)
+            {
                 searchTarget = "SpeedUpgradeUnlocked = ";
                 SpeedUpgradeTier = std::stoi(line.erase(0, searchTarget.length()));
             }
-            if (line.find("ProjectileUpgradeUnlocked = ") == 0){
+            if (line.find("ProjectileUpgradeUnlocked = ") == 0)
+            {
                 searchTarget = "ProjectileUpgradeUnlocked = ";
-                ProjectileUpgradeTier =  std::stoi(line.erase(0, searchTarget.length()));
+                ProjectileUpgradeTier = std::stoi(line.erase(0, searchTarget.length()));
             }
-            if (line.find("orbitUpgradeUnlocked = ") == 0){
+            if (line.find("orbitUpgradeUnlocked = ") == 0)
+            {
                 searchTarget = "orbitUpgradeUnlocked = ";
-                orbitUpgradeTier =  std::stoi(line.erase(0, searchTarget.length()));
+                orbitUpgradeTier = std::stoi(line.erase(0, searchTarget.length()));
             }
         }
     }
 }
 
-void saveData(int &currentHighestScore , bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier){
+void saveData(int &currentHighestScore, bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier)
+{
     std::ifstream saveFile;
     saveFile.open("save.txt");
     std::string line;
 
     std::string updatedContent;
-    
+
     if (saveFile.is_open())
     {
-        while (std::getline(saveFile, line)){
-            if (line.find("HighestScore = ") == 0){
+        while (std::getline(saveFile, line))
+        {
+            if (line.find("HighestScore = ") == 0)
+            {
                 line = "HighestScore = " + std::to_string(currentHighestScore);
             }
-            else if (line.find("SpeedUpgradeUnlocked = ") == 0){
+            else if (line.find("SpeedUpgradeUnlocked = ") == 0)
+            {
                 line = "SpeedUpgradeUnlocked = " + std::to_string(SpeedUpgradeTier);
             }
-            else if (line.find("ProjectileUpgradeUnlocked = ") == 0){
+            else if (line.find("ProjectileUpgradeUnlocked = ") == 0)
+            {
                 line = "ProjectileUpgradeUnlocked = " + std::to_string(ProjectileUpgradeTier);
             }
-            else if (line.find("orbitUpgradeUnlocked = ") == 0){
+            else if (line.find("orbitUpgradeUnlocked = ") == 0)
+            {
                 line = "orbitUpgradeUnlocked = " + std::to_string(orbitUpgradeTier);
             }
             updatedContent += line + "\n";
@@ -369,37 +379,43 @@ void saveData(int &currentHighestScore , bool &SpeedUpgradeTier, bool &Projectil
         saveFile.close();
 
         std::ofstream saveFileOut("save.txt");
-        if (!saveFileOut.is_open()) {
+        if (!saveFileOut.is_open())
+        {
             std::cout << "bro you broke it O_O" << std::endl;
             return;
         }
         saveFileOut << updatedContent;
         saveFileOut.close();
     }
-    
 }
 
-void ScoreManager(int& score, int &currentHighestScore , bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier){
-    if(score > currentHighestScore){
+void ScoreManager(int &score, int &currentHighestScore, bool &SpeedUpgradeTier, bool &ProjectileUpgradeTier, bool &orbitUpgradeTier)
+{
+    if (score > currentHighestScore)
+    {
         currentHighestScore = score;
     }
-    if(score >= 100){
+    if (score >= 100)
+    {
         SpeedUpgradeTier = true;
     }
-    if(score >= 300){
+    if (score >= 300)
+    {
         ProjectileUpgradeTier = true;
     }
-    if(score >= 500){
+    if (score >= 500)
+    {
         orbitUpgradeTier = true;
     }
 }
 
-entt::entity InitializeButton(entt::registry &registry, Vector2 point, float width, float height, std::string text, UILibrary &ui_library){
+entt::entity InitializeButton(entt::registry &registry, Vector2 point, float width, float height, std::string text, UILibrary &ui_library)
+{
     entt::entity button = registry.create();
     TransformComponent &pos_comp = registry.emplace<TransformComponent>(button);
     pos_comp.position = point;
     Button &button_comp = registry.emplace<Button>(button);
-    button_comp.bounds = (Rectangle) {point.x, point.y, width, height};
+    button_comp.bounds = (Rectangle){point.x, point.y, width, height};
     button_comp.color = PINK;
     button_comp.textColor = BLACK;
     button_comp.hasBorder = true;
@@ -409,43 +425,48 @@ entt::entity InitializeButton(entt::registry &registry, Vector2 point, float wid
     return button;
 }
 
-bool isTransformOutsideBorders(TransformComponent transform){
+bool isTransformOutsideBorders(TransformComponent transform)
+{
     int offset = 50;
 
-    if (transform.position.x < 0-offset || 
-        transform.position.x > GetScreenWidth()+offset || 
-        transform.position.y < 0-offset || 
-        transform.position.y > GetScreenHeight()+offset)
+    if (transform.position.x < 0 - offset ||
+        transform.position.x > GetScreenWidth() + offset ||
+        transform.position.y < 0 - offset ||
+        transform.position.y > GetScreenHeight() + offset)
     {
         return true;
     }
     return false;
 }
 
-void grantUpgrade(entt::registry &registry, int &currentScore){
+void grantUpgrade(entt::registry &registry, int &currentScore)
+{
     auto allButtons = registry.view<Button>();
-    for(auto entity : allButtons){
-        Button& button = registry.get<Button>(entity);
+    for (auto entity : allButtons)
+    {
+        Button &button = registry.get<Button>(entity);
         button.isActive = true;
     }
-
 }
 
-void deactivateAllButtons(entt::registry &registry){
+void deactivateAllButtons(entt::registry &registry)
+{
     auto allButtons = registry.view<Button>();
-    for(auto entity : allButtons){
-        Button& button = registry.get<Button>(entity);
+    for (auto entity : allButtons)
+    {
+        Button &button = registry.get<Button>(entity);
         button.isActive = false;
     }
 }
 
-void addScore(int value, int &currentScore, int &counter){
-    currentScore+=value;
-    counter+=value;
+void addScore(int value, int &currentScore, int &counter)
+{
+    currentScore += value;
+    counter += value;
 }
 
 class GameScene : public Scene
-{   
+{
     UILibrary ui_library;
     entt::registry registry;
     entt::entity player = InitializePlayer(registry, {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
@@ -491,24 +512,22 @@ class GameScene : public Scene
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
 
-
-    //ui stuff
-    entt::entity projectileUpgradeButton = InitializeButton(registry, Vector2{100,100}, 100, 40, "projectiles", ui_library);
-    entt::entity SpeedUpgradeButton = InitializeButton(registry, Vector2{220,100}, 100, 40, "speed", ui_library);
-    entt::entity orbitUpgradeButton = InitializeButton(registry, Vector2{340,100}, 100, 40, "orbiting", ui_library);
+    // ui stuff
+    entt::entity projectileUpgradeButton = InitializeButton(registry, Vector2{100, 100}, 100, 40, "projectiles", ui_library);
+    entt::entity SpeedUpgradeButton = InitializeButton(registry, Vector2{220, 100}, 100, 40, "speed", ui_library);
+    entt::entity orbitUpgradeButton = InitializeButton(registry, Vector2{340, 100}, 100, 40, "orbiting", ui_library);
 
     float spawnCooldown = 5;
     float spawnTimer;
-
 
 public:
     void
     Begin() override
     {
-        
-        // Unlocks: 
+
+        // Unlocks:
         deactivateAllButtons(registry);
-        ui_library.root_container.bounds = { 10, 10, 600, 500 };
+        ui_library.root_container.bounds = {10, 10, 600, 500};
         parseSaveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
         raylib_logo = ResourceManager::GetInstance()->GetTexture("Raylib_logo.png");
         logo_position = {300, 100};
@@ -528,7 +547,8 @@ public:
         accumulator = 0;
     }
 
-    void End() override {
+    void End() override
+    {
         saveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
     }
 
@@ -542,22 +562,24 @@ public:
         ScoreManager(score, currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
 
         ////////////////////////////////////////////////// vvvv BUTTON MANAGING CODE vvvv //////////////////////////////////////////////////
-    
-        
 
-        if(counterToNextUpgrade >= 100){
+        if (counterToNextUpgrade >= 100)
+        {
             counterToNextUpgrade = 0;
             grantUpgrade(registry, score);
         }
-        if(registry.get<Button>(projectileUpgradeButton).isClicked && isProjectileUpgradeUnlocked){
+        if (registry.get<Button>(projectileUpgradeButton).isClicked && isProjectileUpgradeUnlocked)
+        {
             ProjectileUpgradeTier += 1;
             deactivateAllButtons(registry);
         }
-        if(registry.get<Button>(SpeedUpgradeButton).isClicked && isSpeedUpgradeUnlocked){
+        if (registry.get<Button>(SpeedUpgradeButton).isClicked && isSpeedUpgradeUnlocked)
+        {
             SpeedUpgradeTier += 1;
             deactivateAllButtons(registry);
         }
-        if(registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked){
+        if (registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked)
+        {
             orbitUpgradeTier += 1;
             deactivateAllButtons(registry);
         }
@@ -565,24 +587,27 @@ public:
         ////////////////////////////////////////////////// ^^^^ BUTTON MANAGING CODE ^^^^ //////////////////////////////////////////////////
 
         ////////////////////////////////////////////////// vvvv SPAWNING CODE vvvv //////////////////////////////////////////////////
-        if(spawnTimer >= spawnCooldown){
+        if (spawnTimer >= spawnCooldown)
+        {
             spawnTimer = 0;
 
             double maxSpawnAmount = GetTime();
-            if(maxSpawnAmount > 30){
+            if (maxSpawnAmount > 30)
+            {
                 maxSpawnAmount = 30;
             }
-            InitializeEnemyProjectile(registry, GetRandomValue(1, maxSpawnAmount), GetRandomValue(1,4));
+            InitializeEnemyProjectile(registry, GetRandomValue(1, maxSpawnAmount), GetRandomValue(1, 4));
 
-            if(GetTime() > 60){
-                InitializeEnemyProjectile(registry, GetRandomValue(10, maxSpawnAmount), GetRandomValue(1,4));
+            if (GetTime() > 60)
+            {
+                InitializeEnemyProjectile(registry, GetRandomValue(10, maxSpawnAmount), GetRandomValue(1, 4));
             }
-            if(GetTime() > 120){
-                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
-                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
-                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
+            if (GetTime() > 120)
+            {
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1, 4));
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1, 4));
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1, 4));
             }
-
         }
         ////////////////////////////////////////////////// ^^^^ SPAWNING CODE ^^^^ //////////////////////////////////////////////////
 
@@ -592,7 +617,8 @@ public:
 
         // testing inputs
 
-        if (IsKeyPressed(KEY_UP)){
+        if (IsKeyPressed(KEY_UP))
+        {
             addScore(100, score, counterToNextUpgrade);
         }
 
@@ -614,7 +640,8 @@ public:
             forces = Vector2Add(forces, {300, 0});
         }
 
-        if (IsKeyPressed(KEY_BACKSLASH)){
+        if (IsKeyPressed(KEY_BACKSLASH))
+        {
             saveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
         }
 
@@ -623,32 +650,35 @@ public:
             sword_comp.rotation = GetWeaponAngle(player_transform.position) - 120.0f;
             sword_comp.is_active = true;
             sword_comp.isRanged = true;
-            if (sword_comp.isRanged){ // @CHRISTIAN this is the projectile initialization. You can use any of the following initializes as necessary.
-            /*
-            HOW IT WORKS:
-            1. Reach a current score threshold, give the player the choice of upgrades. (if no others are unlocked then size upgrade is default)
-            2. Picking an upgrade increases it's tier by 1 each time
-            3. Each tier strengthen's the power up (i.e. more projectiles per tier, more orbiting projectiles per tier)
-            4. 0 means we don't have that upgrade hence it wont work straight up.
-            
-            */
-                if(ProjectileUpgradeTier > 0){
+            if (sword_comp.isRanged)
+            { // @CHRISTIAN this is the projectile initialization. You can use any of the following initializes as necessary.
+                /*
+                HOW IT WORKS:
+                1. Reach a current score threshold, give the player the choice of upgrades. (if no others are unlocked then size upgrade is default)
+                2. Picking an upgrade increases it's tier by 1 each time
+                3. Each tier strengthen's the power up (i.e. more projectiles per tier, more orbiting projectiles per tier)
+                4. 0 means we don't have that upgrade hence it wont work straight up.
+
+                */
+                if (ProjectileUpgradeTier > 0)
+                {
                     InitializePlayerProjectile(registry, ProjectileUpgradeTier, player);
                 }
             }
         }
 
-
         auto allOrbits = registry.view<OrbitComponent>();
 
-        if(IsKeyPressed(1)){
-            if(orbitUpgradeTier > 0 && orbitUpgradeTier < allOrbits.size()){
+        if (IsKeyPressed(1))
+        {
+            if (orbitUpgradeTier > 0 && orbitUpgradeTier < allOrbits.size())
+            {
                 InitializeOrbitProjectile(registry, 1, player);
             }
         }
 
         // Enables sword swing, then disables after swinging a specific amount
-        
+
         if (sword_comp.animation <= 120.0f && sword_comp.is_active)
         {
             sword_comp.animation += 5.0f + SpeedUpgradeTier;
@@ -723,14 +753,16 @@ public:
                     player_physics.velocity.y *= -1;
                 }
             }
+            // Physics for balls
             for (auto entity : collisionCircles)
             {
                 TransformComponent &transform = registry.get<TransformComponent>(entity);
                 CircleComponent &circle = registry.get<CircleComponent>(entity);
                 PhysicsComponent &physics = registry.get<PhysicsComponent>(entity);
                 CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
-                if(isTransformOutsideBorders(transform)){
-                    std::cout<< "entity destroyed" << std::endl;
+                if (isTransformOutsideBorders(transform))
+                {
+                    std::cout << "entity destroyed" << std::endl;
                     registry.destroy(entity);
                 }
 
@@ -741,27 +773,28 @@ public:
                 // std::cout << "collider position: " << collider.position.x << " " << collider.position.y << std::endl;
             }
 
-            for (auto entity : allOrbitingProjectiles){
+            for (auto entity : allOrbitingProjectiles)
+            {
                 TransformComponent &transform = registry.get<TransformComponent>(entity);
                 CircleComponent &circle = registry.get<CircleComponent>(entity);
                 OrbitComponent &orbit = registry.get<OrbitComponent>(entity);
 
                 orbit.angle += 4;
-                if(orbit.angle >= 360){
+                if (orbit.angle >= 360)
+                {
                     orbit.angle = 0;
                 }
                 transform.position = {
-                    player_transform.position.x + orbit.orbitRadius * cosf(DEG2RAD * orbit.angle),  
-                    player_transform.position.y + orbit.orbitRadius * sinf(DEG2RAD * orbit.angle)   
-                };
+                    player_transform.position.x + orbit.orbitRadius * cosf(DEG2RAD * orbit.angle),
+                    player_transform.position.y + orbit.orbitRadius * sinf(DEG2RAD * orbit.angle)};
             }
-           accumulator -= TIMESTEP;
+            accumulator -= TIMESTEP;
         }
     }
 
     void Draw() override
     {
-        //DrawTexturePro(raylib_logo, {0, 0, 256, 256}, {logo_position.x, logo_position.y, 200, 200}, {0, 0}, 0.0f, WHITE);
+        // DrawTexturePro(raylib_logo, {0, 0, 256, 256}, {logo_position.x, logo_position.y, 200, 200}, {0, 0}, 0.0f, WHITE);
         drawWeapon(registry, player, sword, 0);
         BeginBlendMode(BLEND_ALPHA);
         DrawCircleV(player_transform.position, player_circle.radius, player_circle.color);
@@ -786,14 +819,13 @@ public:
             CircleComponent &circle = registry.get<CircleComponent>(entity);
             DrawCircleV(pos.position, circle.radius, circle.color);
         }
-        
-        const char* totalScore = std::to_string(score).c_str();
+
+        const char *totalScore = std::to_string(score).c_str();
         DrawText(totalScore, 5, 0, 30, BLACK);
         ui_library.Draw();
 
         EndBlendMode();
     }
 };
-
 
 #endif
