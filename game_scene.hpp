@@ -294,8 +294,6 @@ void DrawTextureTiled(Texture2D texture, Rectangle source, Rectangle dest, Vecto
     }
 }
 
-
-
 void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sword, int scale){
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
@@ -399,6 +397,15 @@ void ScoreManager(int& score, int &currentHighestScore , bool &SpeedUpgradeTier,
     }
 }
 
+entt::entity InitializeButton(entt::registry &registry, Vector2 point, void (*func)()){
+    entt::entity button = registry.create();
+    TransformComponent &pos_comp = registry.emplace<TransformComponent>(button);
+    pos_comp.position = point;
+    Button &button_comp = registry.emplace<Button>(button);
+
+    return button;
+}
+
 class GameScene : public Scene
 {
     entt::registry registry;
@@ -445,6 +452,11 @@ class GameScene : public Scene
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
 
+
+    //ui stuff
+    entt::entity upgradeButton1;
+    entt::entity upgradeButton2;
+    entt::entity upgradeButton3;
 public:
     void
     Begin() override
@@ -452,7 +464,8 @@ public:
         
         // Unlocks: 
         
-
+        UILibrary ui_library;
+        ui_library.root_container.bounds = { 10, 10, 600, 500 };
         parseSaveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
         raylib_logo = ResourceManager::GetInstance()->GetTexture("Raylib_logo.png");
         logo_position = {300, 100};
