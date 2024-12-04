@@ -60,16 +60,16 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
 
         switch (spawnArea)
         {
-        case KEY_UP:
+        case 1:
             spawnPoint = Vector2{(float)GetRandomValue(0,800),0};
             break;
-        case KEY_RIGHT:
+        case 2:
             spawnPoint = Vector2{(float) GetScreenWidth(), (float) GetRandomValue(0, GetScreenHeight())};
             break;
-        case KEY_LEFT:
+        case 3:
             spawnPoint = Vector2{0, (float) GetRandomValue(0, GetScreenHeight())};
             break;
-        case KEY_DOWN:
+        case 4:
             spawnPoint = Vector2{ (float) GetRandomValue(0,GetScreenWidth()), (float) GetScreenHeight()};
             break;
         default:
@@ -385,31 +385,69 @@ void ScoreManager(int& score, int &currentHighestScore , bool &SpeedUpgradeTier,
     }
     if(score >= 100){
         SpeedUpgradeTier = true;
-        std::cout << "Speed Upgrade Unlocked!" << std::endl;
     }
     if(score >= 300){
         ProjectileUpgradeTier = true;
-        std::cout << "Projectile Upgrade Unlocked!" << std::endl;
     }
     if(score >= 500){
         orbitUpgradeTier = true;
-        std::cout << "Orbit Upgrade Unlocked!" << std::endl;
     }
 }
 
-entt::entity InitializeButton(entt::registry &registry, Vector2 point, void (*func)()){
+entt::entity InitializeButton(entt::registry &registry, Vector2 point, float width, float height, std::string text, UILibrary &ui_library){
     entt::entity button = registry.create();
     TransformComponent &pos_comp = registry.emplace<TransformComponent>(button);
     pos_comp.position = point;
     Button &button_comp = registry.emplace<Button>(button);
-
+    button_comp.bounds = (Rectangle) {point.x, point.y, width, height};
+    button_comp.color = PINK;
+    button_comp.textColor = BLACK;
+    button_comp.hasBorder = true;
+    button_comp.text = text;
+    button_comp.isActive = false;
+    ui_library.root_container.AddChild(&button_comp);
     return button;
 }
 
-class GameScene : public Scene
-{
-    entt::registry registry;
+bool isTransformOutsideBorders(TransformComponent transform){
+    int offset = 50;
 
+    if (transform.position.x < 0-offset || 
+        transform.position.x > GetScreenWidth()+offset || 
+        transform.position.y < 0-offset || 
+        transform.position.y > GetScreenHeight()+offset)
+    {
+        return true;
+    }
+    return false;
+}
+
+void grantUpgrade(entt::registry &registry, int &currentScore){
+    auto allButtons = registry.view<Button>();
+    for(auto entity : allButtons){
+        Button& button = registry.get<Button>(entity);
+        button.isActive = true;
+    }
+
+}
+
+void deactivateAllButtons(entt::registry &registry){
+    auto allButtons = registry.view<Button>();
+    for(auto entity : allButtons){
+        Button& button = registry.get<Button>(entity);
+        button.isActive = false;
+    }
+}
+
+void addScore(int value, int &currentScore, int &counter){
+    currentScore+=value;
+    counter+=value;
+}
+
+class GameScene : public Scene
+{   
+    UILibrary ui_library;
+    entt::registry registry;
     entt::entity player = InitializePlayer(registry, {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
     entt::entity sword = InitializeWeapon(registry, player);
 
@@ -442,6 +480,7 @@ class GameScene : public Scene
     // Player player;
     float accumulator;
     int score = 0;
+    int counterToNextUpgrade = 0;
     // Player components
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     CircleComponent &player_circle = registry.get<CircleComponent>(player);
@@ -454,17 +493,21 @@ class GameScene : public Scene
 
 
     //ui stuff
-    entt::entity upgradeButton1;
-    entt::entity upgradeButton2;
-    entt::entity upgradeButton3;
+    entt::entity projectileUpgradeButton = InitializeButton(registry, Vector2{100,100}, 100, 40, "projectiles", ui_library);
+    entt::entity SpeedUpgradeButton = InitializeButton(registry, Vector2{220,100}, 100, 40, "speed", ui_library);
+    entt::entity orbitUpgradeButton = InitializeButton(registry, Vector2{340,100}, 100, 40, "orbiting", ui_library);
+
+    float spawnCooldown = 5;
+    float spawnTimer;
+
+
 public:
     void
     Begin() override
     {
         
         // Unlocks: 
-        
-        UILibrary ui_library;
+        deactivateAllButtons(registry);
         ui_library.root_container.bounds = { 10, 10, 600, 500 };
         parseSaveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
         raylib_logo = ResourceManager::GetInstance()->GetTexture("Raylib_logo.png");
@@ -491,23 +534,57 @@ public:
 
     void Update() override
     {
+        ui_library.Update();
         // @Christian put a function to obtain an upgrade. (Not here but somewher lol)
         // std::cout << currentHighestScore << std::endl;
         float delta_time = GetFrameTime();
-
+        spawnTimer += delta_time;
         ScoreManager(score, currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
 
-        logo_position.x += 100 * delta_time * move_dir_x;
-        logo_position.y += 100 * delta_time * move_dir_y;
+        ////////////////////////////////////////////////// vvvv BUTTON MANAGING CODE vvvv //////////////////////////////////////////////////
+    
+        
 
-        if (logo_position.x + 200 >= 800 || logo_position.x <= 0)
-        {
-            move_dir_x *= -1;
+        if(counterToNextUpgrade >= 100){
+            counterToNextUpgrade = 0;
+            grantUpgrade(registry, score);
         }
-        if (logo_position.y + 200 >= 600 || logo_position.y <= 0)
-        {
-            move_dir_y *= -1;
+        if(registry.get<Button>(projectileUpgradeButton).isClicked && isProjectileUpgradeUnlocked){
+            ProjectileUpgradeTier += 1;
+            deactivateAllButtons(registry);
         }
+        if(registry.get<Button>(SpeedUpgradeButton).isClicked && isSpeedUpgradeUnlocked){
+            SpeedUpgradeTier += 1;
+            deactivateAllButtons(registry);
+        }
+        if(registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked){
+            orbitUpgradeTier += 1;
+            deactivateAllButtons(registry);
+        }
+
+        ////////////////////////////////////////////////// ^^^^ BUTTON MANAGING CODE ^^^^ //////////////////////////////////////////////////
+
+        ////////////////////////////////////////////////// vvvv SPAWNING CODE vvvv //////////////////////////////////////////////////
+        if(spawnTimer >= spawnCooldown){
+            spawnTimer = 0;
+
+            double maxSpawnAmount = GetTime();
+            if(maxSpawnAmount > 30){
+                maxSpawnAmount = 30;
+            }
+            InitializeEnemyProjectile(registry, GetRandomValue(1, maxSpawnAmount), GetRandomValue(1,4));
+
+            if(GetTime() > 60){
+                InitializeEnemyProjectile(registry, GetRandomValue(10, maxSpawnAmount), GetRandomValue(1,4));
+            }
+            if(GetTime() > 120){
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
+                InitializeEnemyProjectile(registry, GetRandomValue(20, maxSpawnAmount), GetRandomValue(1,4));
+            }
+
+        }
+        ////////////////////////////////////////////////// ^^^^ SPAWNING CODE ^^^^ //////////////////////////////////////////////////
 
         auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
         auto allOrbitingProjectiles = registry.view<OrbitComponent>();
@@ -516,10 +593,7 @@ public:
         // testing inputs
 
         if (IsKeyPressed(KEY_UP)){
-            score += 100;
-        }
-        if (IsKeyPressed(KEY_DOWN)){
-            score -= 20;
+            addScore(100, score, counterToNextUpgrade);
         }
 
         // PLAYER INPUTS
@@ -568,7 +642,7 @@ public:
         auto allOrbits = registry.view<OrbitComponent>();
 
         if(IsKeyPressed(1)){
-            if(orbitUpgradeTier > 0 && allOrbits.size() < orbitUpgradeTier){
+            if(orbitUpgradeTier > 0 && orbitUpgradeTier < allOrbits.size()){
                 InitializeOrbitProjectile(registry, 1, player);
             }
         }
@@ -655,6 +729,10 @@ public:
                 CircleComponent &circle = registry.get<CircleComponent>(entity);
                 PhysicsComponent &physics = registry.get<PhysicsComponent>(entity);
                 CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
+                if(isTransformOutsideBorders(transform)){
+                    std::cout<< "entity destroyed" << std::endl;
+                    registry.destroy(entity);
+                }
 
                 collider.position = transform.position;
 
@@ -711,10 +789,11 @@ public:
         
         const char* totalScore = std::to_string(score).c_str();
         DrawText(totalScore, 5, 0, 30, BLACK);
-
+        ui_library.Draw();
 
         EndBlendMode();
     }
 };
+
 
 #endif

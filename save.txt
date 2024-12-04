@@ -1,4 +1,4 @@
-HighestScore = 0
-SpeedUpgradeUnlocked = 0
-ProjectileUpgradeUnlocked = 0
+HighestScore = 100
+SpeedUpgradeUnlocked = 1
+ProjectileUpgradeUnlocked = 1
 orbitUpgradeUnlocked = 0

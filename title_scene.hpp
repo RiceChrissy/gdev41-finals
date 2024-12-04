@@ -22,11 +22,6 @@ class TitleScene : public Scene
     UILibrary ui_library;
     BasicButton start_game_button;
 
-    
-
-
-    void(TitleScene::*fptr)() = &TitleScene::startScene;
-
 
 public:
     void startScene(){

@@ -222,21 +222,28 @@ struct BasicButton : public UIComponent
 struct Button : public UIComponent
 {
     std::string text;
-    void (*func)();
     bool isActive = true;
     bool isClicked = false;
+    bool hasBorder = false;
+    Color color;
+    Color textColor;
 
     void Draw() 
     {
-        DrawRectangleRec(bounds, GRAY);
-        DrawText(text.c_str(), bounds.x, bounds.y, 14, BLACK);
+        if(isActive){
+            if(hasBorder){
+                DrawRectangle(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10, BLACK);
+            }
+            DrawRectangleRec(bounds, color);
+            DrawText(text.c_str(), bounds.x, bounds.y, 14, textColor);
+        }
+        
     }
 
     bool HandleClick(Vector2 click_position) override
     {
         if (CheckCollisionPointRec(click_position, bounds) && isActive)
         {
-            func();
             isClicked = true;
             return true;
         }
