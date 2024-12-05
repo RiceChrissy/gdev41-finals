@@ -851,7 +851,7 @@ public:
                         player_proj_comp.isAlive = false;
                         // registry.destroy(entity);
                         // registry.destroy(player_proj);
-                        AddScore(50, score, counterToNextUpgrade);
+                        AddScore(10, score, counterToNextUpgrade);
                         continue;
                     }
                 }
@@ -880,7 +880,7 @@ public:
                     // Destroy Projectile
                     // registry.destroy(entity);
                     proj_comp.isAlive = false;
-                    AddScore(50, score, counterToNextUpgrade);
+                    AddScore(10, score, counterToNextUpgrade);
                     continue;
                 }
 
