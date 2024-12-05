@@ -6,6 +6,7 @@
 #include "scene_manager.hpp"
 #include "title_scene.hpp"
 #include "game_scene.hpp"
+#include "game_over_scene.hpp"
 
 extern const int WINDOW_WIDTH;
 extern const int WINDOW_HEIGHT;
@@ -25,8 +26,12 @@ int main()
     GameScene game_scene;
     game_scene.SetSceneManager(&scene_manager);
 
+    GameScene game_over_scene;
+    game_over_scene.SetSceneManager(&scene_manager);
+
     scene_manager.RegisterScene(&title_scene, 0);
     scene_manager.RegisterScene(&game_scene, 1);
+    scene_manager.RegisterScene(&game_over_scene, 2);
 
     scene_manager.SwitchScene(0);
 

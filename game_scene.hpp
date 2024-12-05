@@ -49,6 +49,13 @@ float GetWeaponAngle(Vector2 circle_position)
     return angle_degrees;
 }
 
+float GetImpulse(float elasticity, Vector2 relative_velocity, Vector2 collision_normal, float inverse_mass_a, float inverse_mass_b)
+{
+    float numerator = -(1 + elasticity) * Vector2DotProduct(relative_velocity, collision_normal);
+    float denominator = Vector2DotProduct(collision_normal, collision_normal) * (inverse_mass_a + inverse_mass_b);
+    return numerator / denominator;
+}
+
 void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectiles, int spawnArea)
 {
     Vector2 spawnPoint;
@@ -131,6 +138,7 @@ void InitializePlayerProjectile(entt::registry &registry, float numberOfProjecti
         proj_comp.isAoE = false;
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
+        proj_comp.ownedBy = proj_comp.player;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
         collider.position = pos_comp.position;
         collider.radius = circ_comp.radius;
@@ -173,6 +181,7 @@ entt::entity InitializePlayer(entt::registry &registry, Vector2 point)
     CircleComponent &circ_comp = registry.emplace<CircleComponent>(Player);
     circ_comp.radius = 25.0f;
     circ_comp.color = BLUE;
+    circ_comp.isEnabled = true;
     PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(Player);
     phys_comp.mass = 1.0f;
     phys_comp.inverse_mass = 1 / phys_comp.mass;
@@ -193,7 +202,7 @@ entt::entity InitializeWeapon(entt::registry &registry, entt::entity &player)
     pos_comp.position = player_transform.position;
 
     TextureComponent &text_comp = registry.emplace<TextureComponent>(weapon);
-    text_comp.texture = ResourceManager::GetInstance()->GetTexture("Sword2.png");
+    text_comp.texture = ResourceManager::GetInstance()->GetTexture("swoosh.png");
 
     // @Christian
     /*
@@ -207,11 +216,15 @@ entt::entity InitializeWeapon(entt::registry &registry, entt::entity &player)
     weap_comp.sizeUpgradeTier = 5; // @Christian sizeUpgradeTier determins weapon size.
 
     BoxCollider2D &boxCollider = registry.emplace<BoxCollider2D>(weapon);
-    boxCollider.colliderBounds.height = 50;
-    boxCollider.colliderBounds.width = 20;
+    boxCollider.colliderBounds.height = 64;
+    boxCollider.colliderBounds.width = 25;
     boxCollider.colliderBounds.x = pos_comp.position.x;
     boxCollider.colliderBounds.y = pos_comp.position.y;
     boxCollider.isEnabled = true;
+
+    CircleComponent &weap_circle_hitbox = registry.emplace<CircleComponent>(weapon);
+    weap_circle_hitbox.radius = 32;
+    weap_circle_hitbox.isEnabled = true;
 
     return weapon;
 }
@@ -291,17 +304,42 @@ void DrawTextureTiled(Texture2D texture, Rectangle source, Rectangle dest, Vecto
     }
 }
 
-void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sword, int scale)
+Vector2 GetWeaponDirection(entt::registry &registry, entt::entity &player)
+{
+    TransformComponent &player_transform = registry.get<TransformComponent>(player);
+
+    Vector2 mouse_position = GetMousePosition();
+    Vector2 shot_dir = Vector2Subtract(mouse_position, player_transform.position);
+    float shot_vector_distance = Vector2Length(shot_dir);
+    if (shot_vector_distance > 50.0f)
+    {
+        shot_vector_distance = 50.0f;
+    }
+    shot_dir = Vector2Normalize(shot_dir);
+    Vector2 direction = Vector2Scale(shot_dir, shot_vector_distance);
+
+    return direction;
+}
+
+void drawWeapon(entt::registry &registry, entt::entity &player, entt::entity &sword, int scale, Vector2 &draw_direction)
 {
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
+    BoxCollider2D &sword_bounds = registry.get<BoxCollider2D>(sword);
+
+    CircleComponent &sword_circle_hitbox = registry.get<CircleComponent>(sword);
+
     if (sword_comp.is_active) // Sword swing animation at left click
     {
         float sizeIncrease;
         // @Christian I couldn't figure out how to do sword size because the texture looks funky
-        DrawTexturePro(sword_tex.texture, {0, 0, 50, 115}, {player_transform.position.x, player_transform.position.y, 25, 64}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, WHITE);
+        // DrawTexturePro(sword_tex.texture, {0, 0, 50, 115}, {player_transform.position.x, player_transform.position.y, sword_bounds.colliderBounds.width, sword_bounds.colliderBounds.height}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, WHITE);
         // DrawTextureTiled(sword_tex.texture, (Rectangle) {0, 0, 50, 115}, {player_transform.position.x*2, player_transform.position.y*2, 25*2, 64*2}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, 2, WHITE);
+        // DrawRectanglePro({player_transform.position.x, player_transform.position.y, sword_bounds.colliderBounds.width, sword_bounds.colliderBounds.height}, {12.5, -32}, sword_comp.rotation + sword_comp.animation, RED);
+
+        // DrawCircleLinesV(Vector2Add(player_transform.position, draw_direction), sword_circle_hitbox.radius, RED);
+        DrawTexturePro(sword_tex.texture, {0, 0, 100, 100}, {Vector2Add(player_transform.position, draw_direction).x, Vector2Add(player_transform.position, draw_direction).y, 100, 100}, {50, 50}, sword_comp.rotation + 30.0f, WHITE);
     }
 }
 
@@ -459,7 +497,7 @@ void deactivateAllButtons(entt::registry &registry)
     }
 }
 
-void addScore(int value, int &currentScore, int &counter)
+void AddScore(int value, int &currentScore, int &counter)
 {
     currentScore += value;
     counter += value;
@@ -502,6 +540,7 @@ class GameScene : public Scene
     float accumulator;
     int score = 0;
     int counterToNextUpgrade = 0;
+    Vector2 direction;
     // Player components
     TransformComponent &player_transform = registry.get<TransformComponent>(player);
     CircleComponent &player_circle = registry.get<CircleComponent>(player);
@@ -511,19 +550,22 @@ class GameScene : public Scene
     // Sword components
     WeaponComponent &sword_comp = registry.get<WeaponComponent>(sword);
     TextureComponent &sword_tex = registry.get<TextureComponent>(sword);
+    CircleComponent &sword_bounds = registry.get<CircleComponent>(sword);
+    // BoxCollider2D &sword_bounds = registry.get<BoxCollider2D>(sword);
 
     // ui stuff
     entt::entity projectileUpgradeButton = InitializeButton(registry, Vector2{100, 100}, 100, 40, "projectiles", ui_library);
     entt::entity SpeedUpgradeButton = InitializeButton(registry, Vector2{220, 100}, 100, 40, "speed", ui_library);
     entt::entity orbitUpgradeButton = InitializeButton(registry, Vector2{340, 100}, 100, 40, "orbiting", ui_library);
 
-    float spawnCooldown = 5;
+    float spawnCooldown;
     float spawnTimer;
 
 public:
     void
     Begin() override
     {
+        direction = Vector2Zero();
 
         // Unlocks:
         deactivateAllButtons(registry);
@@ -532,19 +574,14 @@ public:
         raylib_logo = ResourceManager::GetInstance()->GetTexture("Raylib_logo.png");
         logo_position = {300, 100};
 
-        // // Creates a player
-        // player = InitializePlayer(registry, {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
-
-        // sword = ResourceManager::GetInstance()->GetTexture("Sword2.png");
-        // sword_position = player_transform.position;
-        // sword_rotation = 0;
-        // sword_is_active = false;
-
         shield = ResourceManager::GetInstance()->GetTexture("Shield.png");
         shield_position = player_transform.position;
         shield_is_active = false;
 
         accumulator = 0;
+
+        spawnCooldown = 3.0f;
+        spawnTimer = 0.0f;
     }
 
     void End() override
@@ -587,6 +624,7 @@ public:
         ////////////////////////////////////////////////// ^^^^ BUTTON MANAGING CODE ^^^^ //////////////////////////////////////////////////
 
         ////////////////////////////////////////////////// vvvv SPAWNING CODE vvvv //////////////////////////////////////////////////
+        // std::cout << spawnTimer << std::endl;
         if (spawnTimer >= spawnCooldown)
         {
             spawnTimer = 0;
@@ -596,7 +634,7 @@ public:
             {
                 maxSpawnAmount = 30;
             }
-            InitializeEnemyProjectile(registry, GetRandomValue(1, maxSpawnAmount), GetRandomValue(1, 4));
+            InitializeEnemyProjectile(registry, GetRandomValue(5, maxSpawnAmount), GetRandomValue(1, 4));
 
             if (GetTime() > 60)
             {
@@ -619,7 +657,7 @@ public:
 
         if (IsKeyPressed(KEY_UP))
         {
-            addScore(100, score, counterToNextUpgrade);
+            AddScore(100, score, counterToNextUpgrade);
         }
 
         // PLAYER INPUTS
@@ -645,8 +683,9 @@ public:
             saveData(currentHighestScore, isSpeedUpgradeUnlocked, isProjectileUpgradeUnlocked, isOrbitUpgradeUnlocked);
         }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !sword_comp.is_active)
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !sword_comp.is_active && player_circle.isEnabled)
         {
+            direction = GetWeaponDirection(registry, player);
             sword_comp.rotation = GetWeaponAngle(player_transform.position) - 120.0f;
             sword_comp.is_active = true;
             sword_comp.isRanged = true;
@@ -691,7 +730,7 @@ public:
         }
 
         // Shield Controls and Mechanics, how long the shield is active depends on shield_animation
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !shield_is_active)
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !shield_is_active && player_circle.isEnabled)
         {
             shield_is_active = true;
         }
@@ -754,23 +793,67 @@ public:
                 }
             }
             // Physics for balls
-            for (auto entity : collisionCircles)
+            // for (auto entity : collisionCircles)
+            // Collision on player hit by projectile
+            for (auto entity : allProjectiles)
             {
-                TransformComponent &transform = registry.get<TransformComponent>(entity);
-                CircleComponent &circle = registry.get<CircleComponent>(entity);
-                PhysicsComponent &physics = registry.get<PhysicsComponent>(entity);
+                TransformComponent &proj_transform = registry.get<TransformComponent>(entity);
+                CircleComponent &proj_circle = registry.get<CircleComponent>(entity);
+                PhysicsComponent &proj_physics = registry.get<PhysicsComponent>(entity);
                 CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
-                if (isTransformOutsideBorders(transform))
+                if (isTransformOutsideBorders(proj_transform))
                 {
                     std::cout << "entity destroyed" << std::endl;
                     registry.destroy(entity);
                 }
 
-                collider.position = transform.position;
+                collider.position = proj_transform.position;
 
-                physics.velocity = Vector2Add(physics.velocity, Vector2Scale(physics.acceleration, TIMESTEP));
-                transform.position = Vector2Add(transform.position, Vector2Scale(physics.velocity, TIMESTEP));
+                proj_physics.velocity = Vector2Add(proj_physics.velocity, Vector2Scale(proj_physics.acceleration, TIMESTEP));
+                proj_transform.position = Vector2Add(proj_transform.position, Vector2Scale(proj_physics.velocity, TIMESTEP));
                 // std::cout << "collider position: " << collider.position.x << " " << collider.position.y << std::endl;
+
+                Vector2 relative_velocity = Vector2Subtract(player_physics.velocity, proj_physics.velocity);
+                Vector2 player_collision_normal = Vector2Subtract(player_transform.position, proj_transform.position);
+                float player_distance = Vector2Length(player_collision_normal);
+
+                float player_sum_of_radii = player_circle.radius + proj_circle.radius;
+
+                if (player_distance <= player_sum_of_radii && Vector2DotProduct(player_collision_normal, relative_velocity) < 0)
+                {
+                    // Kill Player. AKA Stop Drawing
+                    player_circle.isEnabled = false;
+                }
+
+                // Sword and Projectile Detection
+                Vector2 sword_collision_normal = Vector2Subtract(Vector2Add(player_transform.position, direction), proj_transform.position);
+                float sword_distance = Vector2Length(sword_collision_normal);
+
+                float sword_sum_of_radii = sword_bounds.radius + proj_circle.radius;
+                if (sword_comp.is_active && sword_distance <= sword_sum_of_radii && Vector2DotProduct(sword_collision_normal, relative_velocity) < 0)
+                {
+                    // Destroy Projectile
+                    registry.destroy(entity);
+                    AddScore(50, score, counterToNextUpgrade);
+                }
+
+                // Shield and Projectile Detection
+                Vector2 shield_collision_normal = Vector2Subtract(player_transform.position, proj_transform.position);
+                float shield_distance = Vector2Length(sword_collision_normal);
+
+                float shield_sum_of_radii = (player_circle.radius * 2.1) + proj_circle.radius;
+                if (shield_is_active && shield_distance <= shield_sum_of_radii && Vector2DotProduct(shield_collision_normal, relative_velocity) < 0)
+                {
+                    // Destroy Projectile
+                    // registry.destroy(entity);
+
+                    float impulse = GetImpulse(0, relative_velocity, shield_collision_normal, player_physics.inverse_mass, proj_physics.inverse_mass);
+
+                    player_physics.velocity = Vector2Add(player_physics.velocity, Vector2Scale(shield_collision_normal, impulse * player_physics.inverse_mass));
+                    // proj_physics.velocity = Vector2Subtract(proj_physics.velocity, Vector2Scale(shield_collision_normal, impulse * proj_physics.inverse_mass));
+                    // proj_physics.velocity.x *= -1;
+                    // proj_physics.velocity.y *= -1;
+                }
             }
 
             for (auto entity : allOrbitingProjectiles)
@@ -795,12 +878,20 @@ public:
     void Draw() override
     {
         // DrawTexturePro(raylib_logo, {0, 0, 256, 256}, {logo_position.x, logo_position.y, 200, 200}, {0, 0}, 0.0f, WHITE);
-        drawWeapon(registry, player, sword, 0);
+        drawWeapon(registry, player, sword, 0, direction);
         BeginBlendMode(BLEND_ALPHA);
-        DrawCircleV(player_transform.position, player_circle.radius, player_circle.color);
+        if (player_circle.isEnabled)
+        {
+            DrawCircleV(player_transform.position, player_circle.radius, player_circle.color);
+        }
+        else
+        {
+            DrawText("GAME OVER", 300, 325, 30, RED);
+        }
+
         if (shield_is_active) // Shield animation at right click
         {
-            DrawTexturePro(shield, {0, 0, 269, 269}, {player_transform.position.x, player_transform.position.y, player_circle.radius * 3, player_circle.radius * 3}, {player_circle.radius * 1.5f, player_circle.radius * 1.5f}, 0.0f, BLUE);
+            DrawTexturePro(shield, {0, 0, 269, 269}, {player_transform.position.x, player_transform.position.y, player_circle.radius * 4, player_circle.radius * 4}, {player_circle.radius * 2.0f, player_circle.radius * 2.0f}, 0.0f, BLUE);
         }
 
         auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
