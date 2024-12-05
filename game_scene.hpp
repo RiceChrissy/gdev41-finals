@@ -166,7 +166,9 @@ void InitializeOrbitProjectile(entt::registry &registry, float numberOfProjectil
         circ_comp.color = GREEN;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
         PlayerProjectileComponent &proj_comp = registry.emplace<PlayerProjectileComponent>(projectile);
+        proj_comp.ownedBy = proj_comp.player;
         proj_comp.isAoE = false;
+        proj_comp.isAlive = true;
         // phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
