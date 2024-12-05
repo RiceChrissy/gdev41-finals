@@ -612,17 +612,17 @@ public:
             counterToNextUpgrade = 0;
             grantUpgrade(registry, score);
         }
-        if (registry.get<Button>(projectileUpgradeButton).isClicked && isProjectileUpgradeUnlocked)
+        if (registry.get<Button>(projectileUpgradeButton).isClicked && isProjectileUpgradeUnlocked && registry.get<Button>(projectileUpgradeButton).isActive)
         {
             ProjectileUpgradeTier += 1;
             deactivateAllButtons(registry);
         }
-        if (registry.get<Button>(SpeedUpgradeButton).isClicked && isSpeedUpgradeUnlocked)
+        if (registry.get<Button>(SpeedUpgradeButton).isClicked && isSpeedUpgradeUnlocked && registry.get<Button>(SpeedUpgradeButton).isActive)
         {
             SpeedUpgradeTier += 1;
             deactivateAllButtons(registry);
         }
-        if (registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked)
+        if (registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked && registry.get<Button>(orbitUpgradeButton).isActive)
         {
             orbitUpgradeTier += 1;
             deactivateAllButtons(registry);
