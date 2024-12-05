@@ -1,4 +1,4 @@
-HighestScore = 5650
+HighestScore = 34650
 SpeedUpgradeUnlocked = 1
 ProjectileUpgradeUnlocked = 1
 orbitUpgradeUnlocked = 1

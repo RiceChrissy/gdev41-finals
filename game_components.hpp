@@ -92,7 +92,21 @@ struct TextureComponent
 {
     Texture texture;
 };
-struct ProjectileComponent
+struct EnemyProjectileComponent
+{
+    enum owner
+    {
+        player,
+        enemy
+    };
+    float health;
+    owner ownedBy;
+    bool isAoE;
+    float damage;
+    bool destroyOnContact;
+};
+
+struct PlayerProjectileComponent
 {
     enum owner
     {
@@ -124,12 +138,9 @@ struct OrbitComponent
     float angle = 0.0f;
 };
 
-
-
 // UI
 
 int width = 800, height = 600;
-
 
 struct UIComponent
 {
@@ -140,16 +151,14 @@ struct UIComponent
     virtual bool HandleClick(Vector2 click_position) = 0;
 };
 
-
 struct UIContainer : public UIComponent
 {
-    std::vector<UIComponent*> children;
+    std::vector<UIComponent *> children;
 
-    void AddChild(UIComponent* child)
+    void AddChild(UIComponent *child)
     {
         children.push_back(child);
     }
-
 
     void Draw() override
     {
@@ -201,7 +210,7 @@ struct BasicButton : public UIComponent
     bool isActive = true;
     bool isClicked = false;
 
-    void Draw() 
+    void Draw()
     {
         DrawRectangleRec(bounds, GRAY);
         DrawText(text.c_str(), bounds.x, bounds.y, 14, BLACK);
@@ -228,16 +237,17 @@ struct Button : public UIComponent
     Color color;
     Color textColor;
 
-    void Draw() 
+    void Draw()
     {
-        if(isActive){
-            if(hasBorder){
+        if (isActive)
+        {
+            if (hasBorder)
+            {
                 DrawRectangle(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10, BLACK);
             }
             DrawRectangleRec(bounds, color);
             DrawText(text.c_str(), bounds.x, bounds.y, 14, textColor);
         }
-        
     }
 
     bool HandleClick(Vector2 click_position) override
@@ -260,13 +270,15 @@ struct CheckBox : public UIComponent
     void Draw() override
     {
         DrawRectangleRec(bounds, GRAY);
-        if(isChecked == true){
+        if (isChecked == true)
+        {
             DrawRectangleRec(bounds, BLACK);
         }
         DrawText(text.c_str(), bounds.x + (bounds.width) + 10, bounds.y, 14, BLACK);
     }
 
-    void Check(){
+    void Check()
+    {
         isChecked = !isChecked;
     }
     bool HandleClick(Vector2 click_position) override
@@ -279,8 +291,6 @@ struct CheckBox : public UIComponent
         return false;
     }
 };
-
-
 
 struct Label : public UIComponent
 {
@@ -296,7 +306,5 @@ struct Label : public UIComponent
         return false;
     }
 };
-
-
 
 #endif

@@ -94,7 +94,7 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
         circ_comp.radius = GetRandomValue(10, 15);
         circ_comp.color = RED;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
-        ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
+        EnemyProjectileComponent &proj_comp = registry.emplace<EnemyProjectileComponent>(projectile);
         proj_comp.isAoE = false;
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
@@ -134,7 +134,7 @@ void InitializePlayerProjectile(entt::registry &registry, float numberOfProjecti
         circ_comp.radius = GetRandomValue(10, 15);
         circ_comp.color = PURPLE;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
-        ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
+        PlayerProjectileComponent &proj_comp = registry.emplace<PlayerProjectileComponent>(projectile);
         proj_comp.isAoE = false;
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
@@ -163,7 +163,7 @@ void InitializeOrbitProjectile(entt::registry &registry, float numberOfProjectil
         circ_comp.radius = GetRandomValue(10, 15);
         circ_comp.color = RED;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
-        ProjectileComponent &proj_comp = registry.emplace<ProjectileComponent>(projectile);
+        PlayerProjectileComponent &proj_comp = registry.emplace<PlayerProjectileComponent>(projectile);
         proj_comp.isAoE = false;
         // phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
@@ -531,10 +531,10 @@ class GameScene : public Scene
     bool isProjectileUpgradeUnlocked;
     bool isOrbitUpgradeUnlocked;
 
-    int SpeedUpgradeTier = 0;
-    int ProjectileUpgradeTier = 0;
-    int SizeUpgradeTier = 0;
-    int orbitUpgradeTier = 0;
+    int SpeedUpgradeTier;
+    int ProjectileUpgradeTier;
+    int SizeUpgradeTier;
+    int orbitUpgradeTier;
 
     // Player player;
     float accumulator;
@@ -566,6 +566,11 @@ public:
     Begin() override
     {
         direction = Vector2Zero();
+
+        SpeedUpgradeTier = 0;
+        ProjectileUpgradeTier = 0;
+        SizeUpgradeTier = 0;
+        orbitUpgradeTier = 0;
 
         // Unlocks:
         deactivateAllButtons(registry);
@@ -649,7 +654,8 @@ public:
         }
         ////////////////////////////////////////////////// ^^^^ SPAWNING CODE ^^^^ //////////////////////////////////////////////////
 
-        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
+        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, EnemyProjectileComponent>();
+        auto player_projectiles = registry.view<PlayerProjectileComponent>();
         auto allOrbitingProjectiles = registry.view<OrbitComponent>();
         Vector2 forces = Vector2Zero(); // every frame set the forces to a 0 vector
 
@@ -794,20 +800,44 @@ public:
             }
             // Physics for balls
             // for (auto entity : collisionCircles)
-            // Collision on player hit by projectile
+            // Collision on player hit by enemy projectile
             for (auto entity : allProjectiles)
             {
                 TransformComponent &proj_transform = registry.get<TransformComponent>(entity);
                 CircleComponent &proj_circle = registry.get<CircleComponent>(entity);
                 PhysicsComponent &proj_physics = registry.get<PhysicsComponent>(entity);
                 CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
+                EnemyProjectileComponent &proj_comp = registry.get<EnemyProjectileComponent>(entity);
                 if (isTransformOutsideBorders(proj_transform))
                 {
                     std::cout << "entity destroyed" << std::endl;
                     registry.destroy(entity);
                 }
-
                 collider.position = proj_transform.position;
+                // Projectile and Projectile Detection
+                for (auto player_proj : player_projectiles)
+                {
+
+                    TransformComponent &player_proj_transform = registry.get<TransformComponent>(player_proj);
+                    CircleComponent &player_proj_circle = registry.get<CircleComponent>(player_proj);
+                    PhysicsComponent &player_proj_physics = registry.get<PhysicsComponent>(player_proj);
+
+                    player_proj_physics.velocity = Vector2Add(player_proj_physics.velocity, Vector2Scale(player_proj_physics.acceleration, TIMESTEP));
+                    player_proj_transform.position = Vector2Add(player_proj_transform.position, Vector2Scale(player_proj_physics.velocity, TIMESTEP));
+
+                    Vector2 proj_relative_velocity = Vector2Subtract(player_proj_physics.velocity, proj_physics.velocity);
+                    Vector2 proj_collision_normal = Vector2Subtract(Vector2Add(player_proj_transform.position, direction), proj_transform.position);
+                    float proj_distance = Vector2Length(proj_collision_normal);
+
+                    float proj_sum_of_radii = sword_bounds.radius + proj_circle.radius;
+                    if (proj_distance <= proj_sum_of_radii && Vector2DotProduct(proj_collision_normal, proj_relative_velocity) < 0)
+                    {
+                        // Destroy Projectile
+                        registry.destroy(entity);
+                        registry.destroy(player_proj);
+                        AddScore(50, score, counterToNextUpgrade);
+                    }
+                }
 
                 proj_physics.velocity = Vector2Add(proj_physics.velocity, Vector2Scale(proj_physics.acceleration, TIMESTEP));
                 proj_transform.position = Vector2Add(proj_transform.position, Vector2Scale(proj_physics.velocity, TIMESTEP));
@@ -830,7 +860,7 @@ public:
                 float sword_distance = Vector2Length(sword_collision_normal);
 
                 float sword_sum_of_radii = sword_bounds.radius + proj_circle.radius;
-                if (sword_comp.is_active && sword_distance <= sword_sum_of_radii && Vector2DotProduct(sword_collision_normal, relative_velocity) < 0)
+                if (sword_comp.is_active && proj_comp.ownedBy == proj_comp.enemy && sword_distance <= sword_sum_of_radii && Vector2DotProduct(sword_collision_normal, relative_velocity) < 0)
                 {
                     // Destroy Projectile
                     registry.destroy(entity);
@@ -894,10 +924,17 @@ public:
             DrawTexturePro(shield, {0, 0, 269, 269}, {player_transform.position.x, player_transform.position.y, player_circle.radius * 4, player_circle.radius * 4}, {player_circle.radius * 2.0f, player_circle.radius * 2.0f}, 0.0f, BLUE);
         }
 
-        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, ProjectileComponent>();
+        auto allProjectiles = registry.view<TransformComponent, CircleComponent, PhysicsComponent, EnemyProjectileComponent>();
+        auto player_projectiles = registry.view<PlayerProjectileComponent>();
         auto allOrbit = registry.view<TransformComponent, CircleComponent, OrbitComponent>();
 
         for (auto entity : allProjectiles)
+        {
+            TransformComponent &pos = registry.get<TransformComponent>(entity);
+            CircleComponent &circle = registry.get<CircleComponent>(entity);
+            DrawCircleV(pos.position, circle.radius, circle.color);
+        }
+        for (auto entity : player_projectiles)
         {
             TransformComponent &pos = registry.get<TransformComponent>(entity);
             CircleComponent &circle = registry.get<CircleComponent>(entity);
