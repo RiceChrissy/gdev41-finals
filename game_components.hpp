@@ -104,6 +104,7 @@ struct EnemyProjectileComponent
     bool isAoE;
     float damage;
     bool destroyOnContact;
+    bool isAlive;
 };
 
 struct PlayerProjectileComponent
@@ -118,6 +119,7 @@ struct PlayerProjectileComponent
     bool isAoE;
     float damage;
     bool destroyOnContact;
+    bool isAlive;
 };
 
 struct OrbitComponent

@@ -99,6 +99,7 @@ void InitializeEnemyProjectile(entt::registry &registry, float numberOfProjectil
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
         proj_comp.ownedBy = proj_comp.enemy;
+        proj_comp.isAlive = true;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
         collider.position = pos_comp.position;
         collider.radius = circ_comp.radius;
@@ -139,6 +140,7 @@ void InitializePlayerProjectile(entt::registry &registry, float numberOfProjecti
         phys_comp.velocity = Vector2Scale(direction, 200);
         proj_comp.destroyOnContact = false;
         proj_comp.ownedBy = proj_comp.player;
+        proj_comp.isAlive = true;
         CircleCollider2D &collider = registry.emplace<CircleCollider2D>(projectile);
         collider.position = pos_comp.position;
         collider.radius = circ_comp.radius;
@@ -669,19 +671,19 @@ public:
         // PLAYER INPUTS
         if (IsKeyDown(KEY_W))
         {
-            forces = Vector2Add(forces, {0, -300});
+            forces = Vector2Add(forces, {0, -900});
         }
         if (IsKeyDown(KEY_A))
         {
-            forces = Vector2Add(forces, {-300, 0});
+            forces = Vector2Add(forces, {-900, 0});
         }
         if (IsKeyDown(KEY_S))
         {
-            forces = Vector2Add(forces, {0, 300});
+            forces = Vector2Add(forces, {0, 900});
         }
         if (IsKeyDown(KEY_D))
         {
-            forces = Vector2Add(forces, {300, 0});
+            forces = Vector2Add(forces, {900, 0});
         }
 
         if (IsKeyPressed(KEY_BACKSLASH))
@@ -770,50 +772,56 @@ public:
             /*
                 PUT ALL CODE related to collision here in the physics step. On the destruction of any enemy projectile, gain points.
             */
-            for (int i = 0; i < 2; i++)
+            player_physics.velocity = Vector2Add(player_physics.velocity, Vector2Scale(player_physics.acceleration, TIMESTEP));
+            player_physics.velocity = Vector2Subtract(player_physics.velocity, Vector2Scale(player_physics.velocity, FRICTION * player_physics.inverse_mass * TIMESTEP));
+            player_transform.position = Vector2Add(player_transform.position, Vector2Scale(player_physics.velocity, TIMESTEP));
+            // Negates the velocity at x and y if the object hits a wall. (Basic Collision Detection)
+            ////////////////////////////////////////////////////////
+            if (player_transform.position.x - player_circle.radius <= 0)
             {
-                player_physics.velocity = Vector2Add(player_physics.velocity, Vector2Scale(player_physics.acceleration, TIMESTEP));
-                player_physics.velocity = Vector2Subtract(player_physics.velocity, Vector2Scale(player_physics.velocity, FRICTION * player_physics.inverse_mass * TIMESTEP));
-                player_transform.position = Vector2Add(player_transform.position, Vector2Scale(player_physics.velocity, TIMESTEP));
-                // Negates the velocity at x and y if the object hits a wall. (Basic Collision Detection)
-                ////////////////////////////////////////////////////////
-                if (player_transform.position.x - player_circle.radius <= 0)
-                {
-                    player_transform.position.x = player_circle.radius;
-                    player_physics.velocity.x *= -1;
-                }
-                if (player_transform.position.x + player_circle.radius >= WINDOW_WIDTH)
-                {
-                    player_transform.position.x = WINDOW_WIDTH - player_circle.radius;
-                    player_physics.velocity.x *= -1;
-                }
-                if (player_transform.position.y - player_circle.radius <= 0)
-                {
-                    player_transform.position.y = player_circle.radius;
-                    player_physics.velocity.y *= -1;
-                }
-                if (player_transform.position.y + player_circle.radius >= WINDOW_HEIGHT)
-                {
-                    player_transform.position.y = WINDOW_HEIGHT - player_circle.radius;
-                    player_physics.velocity.y *= -1;
-                }
+                player_transform.position.x = player_circle.radius;
+                player_physics.velocity.x *= -1;
+            }
+            if (player_transform.position.x + player_circle.radius >= WINDOW_WIDTH)
+            {
+                player_transform.position.x = WINDOW_WIDTH - player_circle.radius;
+                player_physics.velocity.x *= -1;
+            }
+            if (player_transform.position.y - player_circle.radius <= 0)
+            {
+                player_transform.position.y = player_circle.radius;
+                player_physics.velocity.y *= -1;
+            }
+            if (player_transform.position.y + player_circle.radius >= WINDOW_HEIGHT)
+            {
+                player_transform.position.y = WINDOW_HEIGHT - player_circle.radius;
+                player_physics.velocity.y *= -1;
             }
             // Physics for balls
             // for (auto entity : collisionCircles)
             // Collision on player hit by enemy projectile
             for (auto entity : allProjectiles)
             {
+
                 TransformComponent &proj_transform = registry.get<TransformComponent>(entity);
                 CircleComponent &proj_circle = registry.get<CircleComponent>(entity);
                 PhysicsComponent &proj_physics = registry.get<PhysicsComponent>(entity);
                 CircleCollider2D &collider = registry.get<CircleCollider2D>(entity);
                 EnemyProjectileComponent &proj_comp = registry.get<EnemyProjectileComponent>(entity);
-                if (isTransformOutsideBorders(proj_transform))
+                if (isTransformOutsideBorders(proj_transform) || !proj_comp.isAlive)
                 {
                     std::cout << "entity destroyed" << std::endl;
                     registry.destroy(entity);
+                    continue;
                 }
+
+                proj_transform.position = Vector2Add(proj_transform.position, Vector2Scale(proj_physics.velocity, TIMESTEP));
                 collider.position = proj_transform.position;
+
+                // Acce/Deceleration
+                //  proj_physics.velocity = Vector2Add(proj_physics.velocity, Vector2Scale(proj_physics.acceleration, TIMESTEP));
+                //  proj_physics.velocity = Vector2Subtract(proj_physics.velocity, Vector2Scale(proj_physics.velocity, FRICTION * proj_physics.inverse_mass * TIMESTEP));
+
                 // Projectile and Projectile Detection
                 for (auto player_proj : player_projectiles)
                 {
@@ -821,9 +829,15 @@ public:
                     TransformComponent &player_proj_transform = registry.get<TransformComponent>(player_proj);
                     CircleComponent &player_proj_circle = registry.get<CircleComponent>(player_proj);
                     PhysicsComponent &player_proj_physics = registry.get<PhysicsComponent>(player_proj);
+                    PlayerProjectileComponent &player_proj_comp = registry.get<PlayerProjectileComponent>(player_proj);
 
-                    player_proj_physics.velocity = Vector2Add(player_proj_physics.velocity, Vector2Scale(player_proj_physics.acceleration, TIMESTEP));
+                    if (player_proj_comp.isAlive == false)
+                    {
+                        continue;
+                    }
+
                     player_proj_transform.position = Vector2Add(player_proj_transform.position, Vector2Scale(player_proj_physics.velocity, TIMESTEP));
+                    // player_proj_physics.velocity = Vector2Add(player_proj_physics.velocity, Vector2Scale(player_proj_physics.acceleration, TIMESTEP));
 
                     Vector2 proj_relative_velocity = Vector2Subtract(player_proj_physics.velocity, proj_physics.velocity);
                     Vector2 proj_collision_normal = Vector2Subtract(Vector2Add(player_proj_transform.position, direction), proj_transform.position);
@@ -832,15 +846,16 @@ public:
                     float proj_sum_of_radii = sword_bounds.radius + proj_circle.radius;
                     if (proj_distance <= proj_sum_of_radii && Vector2DotProduct(proj_collision_normal, proj_relative_velocity) < 0)
                     {
-                        // Destroy Projectile
-                        registry.destroy(entity);
-                        registry.destroy(player_proj);
+                        // Disable Projectile then destroy when out of screen
+                        proj_comp.isAlive = false;
+                        player_proj_comp.isAlive = false;
+                        // registry.destroy(entity);
+                        // registry.destroy(player_proj);
                         AddScore(50, score, counterToNextUpgrade);
+                        continue;
                     }
                 }
 
-                proj_physics.velocity = Vector2Add(proj_physics.velocity, Vector2Scale(proj_physics.acceleration, TIMESTEP));
-                proj_transform.position = Vector2Add(proj_transform.position, Vector2Scale(proj_physics.velocity, TIMESTEP));
                 // std::cout << "collider position: " << collider.position.x << " " << collider.position.y << std::endl;
 
                 Vector2 relative_velocity = Vector2Subtract(player_physics.velocity, proj_physics.velocity);
@@ -863,8 +878,10 @@ public:
                 if (sword_comp.is_active && proj_comp.ownedBy == proj_comp.enemy && sword_distance <= sword_sum_of_radii && Vector2DotProduct(sword_collision_normal, relative_velocity) < 0)
                 {
                     // Destroy Projectile
-                    registry.destroy(entity);
+                    // registry.destroy(entity);
+                    proj_comp.isAlive = false;
                     AddScore(50, score, counterToNextUpgrade);
+                    continue;
                 }
 
                 // Shield and Projectile Detection
@@ -930,14 +947,25 @@ public:
 
         for (auto entity : allProjectiles)
         {
+            EnemyProjectileComponent &proj_comp = registry.get<EnemyProjectileComponent>(entity);
+            if (!proj_comp.isAlive)
+            {
+                continue;
+            }
+
             TransformComponent &pos = registry.get<TransformComponent>(entity);
             CircleComponent &circle = registry.get<CircleComponent>(entity);
             DrawCircleV(pos.position, circle.radius, circle.color);
         }
-        for (auto entity : player_projectiles)
+        for (auto player_proj : player_projectiles)
         {
-            TransformComponent &pos = registry.get<TransformComponent>(entity);
-            CircleComponent &circle = registry.get<CircleComponent>(entity);
+            PlayerProjectileComponent &player_proj_comp = registry.get<PlayerProjectileComponent>(player_proj);
+            if (!player_proj_comp.isAlive)
+            {
+                continue;
+            }
+            TransformComponent &pos = registry.get<TransformComponent>(player_proj);
+            CircleComponent &circle = registry.get<CircleComponent>(player_proj);
             DrawCircleV(pos.position, circle.radius, circle.color);
         }
 
