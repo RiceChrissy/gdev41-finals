@@ -163,7 +163,7 @@ void InitializeOrbitProjectile(entt::registry &registry, float numberOfProjectil
         pos_comp.position = spawnPoint;
         CircleComponent &circ_comp = registry.emplace<CircleComponent>(projectile);
         circ_comp.radius = GetRandomValue(10, 15);
-        circ_comp.color = RED;
+        circ_comp.color = GREEN;
         PhysicsComponent &phys_comp = registry.emplace<PhysicsComponent>(projectile);
         PlayerProjectileComponent &proj_comp = registry.emplace<PlayerProjectileComponent>(projectile);
         proj_comp.isAoE = false;
@@ -716,11 +716,13 @@ public:
 
         auto allOrbits = registry.view<OrbitComponent>();
 
-        if (IsKeyPressed(1))
+        if (IsKeyPressed(KEY_Q))
         {
+            std::cout << "spawned orbit" << std::endl;
+            InitializeOrbitProjectile(registry, 1, player);
             if (orbitUpgradeTier > 0 && orbitUpgradeTier < allOrbits.size())
             {
-                InitializeOrbitProjectile(registry, 1, player);
+                
             }
         }
 
@@ -810,7 +812,6 @@ public:
                 EnemyProjectileComponent &proj_comp = registry.get<EnemyProjectileComponent>(entity);
                 if (isTransformOutsideBorders(proj_transform) || !proj_comp.isAlive)
                 {
-                    std::cout << "entity destroyed" << std::endl;
                     registry.destroy(entity);
                     continue;
                 }
