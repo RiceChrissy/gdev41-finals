@@ -830,17 +830,17 @@ public:
                     CircleComponent &player_proj_circle = registry.get<CircleComponent>(player_proj);
                     PhysicsComponent &player_proj_physics = registry.get<PhysicsComponent>(player_proj);
                     PlayerProjectileComponent &player_proj_comp = registry.get<PlayerProjectileComponent>(player_proj);
-
-                    if (player_proj_comp.isAlive == false)
+                    if (isTransformOutsideBorders(player_proj_transform) || !player_proj_comp.isAlive)
                     {
+                        std::cout << "player proj destroyed" << std::endl;
+                        registry.destroy(player_proj);
                         continue;
                     }
-
                     player_proj_transform.position = Vector2Add(player_proj_transform.position, Vector2Scale(player_proj_physics.velocity, TIMESTEP));
                     // player_proj_physics.velocity = Vector2Add(player_proj_physics.velocity, Vector2Scale(player_proj_physics.acceleration, TIMESTEP));
 
                     Vector2 proj_relative_velocity = Vector2Subtract(player_proj_physics.velocity, proj_physics.velocity);
-                    Vector2 proj_collision_normal = Vector2Subtract(Vector2Add(player_proj_transform.position, direction), proj_transform.position);
+                    Vector2 proj_collision_normal = Vector2Subtract(player_proj_transform.position, proj_transform.position);
                     float proj_distance = Vector2Length(proj_collision_normal);
 
                     float proj_sum_of_radii = sword_bounds.radius + proj_circle.radius;
@@ -849,8 +849,6 @@ public:
                         // Disable Projectile then destroy when out of screen
                         proj_comp.isAlive = false;
                         player_proj_comp.isAlive = false;
-                        // registry.destroy(entity);
-                        // registry.destroy(player_proj);
                         AddScore(10, score, counterToNextUpgrade);
                         continue;
                     }
@@ -858,6 +856,7 @@ public:
 
                 // std::cout << "collider position: " << collider.position.x << " " << collider.position.y << std::endl;
 
+                // Player and Projectile Detection
                 Vector2 relative_velocity = Vector2Subtract(player_physics.velocity, proj_physics.velocity);
                 Vector2 player_collision_normal = Vector2Subtract(player_transform.position, proj_transform.position);
                 float player_distance = Vector2Length(player_collision_normal);
