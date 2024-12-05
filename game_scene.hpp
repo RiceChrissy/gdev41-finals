@@ -626,8 +626,12 @@ public:
         }
         if (registry.get<Button>(orbitUpgradeButton).isClicked && isOrbitUpgradeUnlocked && registry.get<Button>(orbitUpgradeButton).isActive)
         {
-            orbitUpgradeTier += 1;
-            deactivateAllButtons(registry);
+            if (orbitUpgradeTier < 5)
+            {
+                orbitUpgradeTier += 1;
+                InitializeOrbitProjectile(registry, 1, player);
+                deactivateAllButtons(registry);
+            }
         }
 
         ////////////////////////////////////////////////// ^^^^ BUTTON MANAGING CODE ^^^^ //////////////////////////////////////////////////
@@ -721,10 +725,8 @@ public:
         if (IsKeyPressed(KEY_Q))
         {
             std::cout << "spawned orbit" << std::endl;
-            InitializeOrbitProjectile(registry, 1, player);
             if (orbitUpgradeTier > 0 && orbitUpgradeTier < allOrbits.size())
             {
-                
             }
         }
 
@@ -833,9 +835,9 @@ public:
                     CircleComponent &player_proj_circle = registry.get<CircleComponent>(player_proj);
                     PhysicsComponent &player_proj_physics = registry.get<PhysicsComponent>(player_proj);
                     PlayerProjectileComponent &player_proj_comp = registry.get<PlayerProjectileComponent>(player_proj);
-
-                    if (player_proj_comp.isAlive == false)
+                    if (isTransformOutsideBorders(player_proj_transform) || !player_proj_comp.isAlive)
                     {
+                        registry.destroy(player_proj);
                         continue;
                     }
 
@@ -846,14 +848,22 @@ public:
                     Vector2 proj_collision_normal = Vector2Subtract(Vector2Add(player_proj_transform.position, direction), proj_transform.position);
                     float proj_distance = Vector2Length(proj_collision_normal);
 
-                    float proj_sum_of_radii = sword_bounds.radius + proj_circle.radius;
-                    if (proj_distance <= proj_sum_of_radii && Vector2DotProduct(proj_collision_normal, proj_relative_velocity) < 0)
+                    float proj_sum_of_radii = player_proj_circle.radius + proj_circle.radius;
+                    if (proj_distance <= proj_sum_of_radii && Vector2DotProduct(proj_collision_normal, proj_relative_velocity) < 0 && registry.any_of<OrbitComponent>(player_proj) == false)
                     {
                         // Disable Projectile then destroy when out of screen
                         proj_comp.isAlive = false;
                         player_proj_comp.isAlive = false;
                         // registry.destroy(entity);
                         // registry.destroy(player_proj);
+                        AddScore(10, score, counterToNextUpgrade);
+                        continue;
+                    }
+                    if (proj_distance <= proj_sum_of_radii && Vector2DotProduct(proj_collision_normal, proj_relative_velocity) < 0 && registry.any_of<OrbitComponent>(player_proj) == true)
+                    {
+                        // Disable Projectile then destroy when out of screen
+                        proj_comp.isAlive = false;
+                        // player_proj_comp.isAlive = true;1
                         AddScore(10, score, counterToNextUpgrade);
                         continue;
                     }
@@ -900,7 +910,8 @@ public:
                     float impulse = GetImpulse(0, relative_velocity, shield_collision_normal, player_physics.inverse_mass, proj_physics.inverse_mass);
 
                     player_physics.velocity = Vector2Add(player_physics.velocity, Vector2Scale(shield_collision_normal, impulse * player_physics.inverse_mass));
-                    // proj_physics.velocity = Vector2Subtract(proj_physics.velocity, Vector2Scale(shield_collision_normal, impulse * proj_physics.inverse_mass));
+                    proj_physics.velocity = Vector2Subtract(proj_physics.velocity, Vector2Scale(shield_collision_normal, impulse * proj_physics.inverse_mass));
+
                     // proj_physics.velocity.x *= -1;
                     // proj_physics.velocity.y *= -1;
                 }
